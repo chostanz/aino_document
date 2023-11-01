@@ -29,7 +29,6 @@ type Register struct {
 }
 
 type UserAppRole struct {
-	User_id             int `json:"user_id" db:"user_id"`
 	Application_role_id int `json:"application_role_id" db:"application_role_id"`
 	Division_id         int `json:"division_id" db:"division_id"`
 }

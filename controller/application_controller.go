@@ -13,9 +13,9 @@ func AddApplication(c echo.Context) error {
 	var addApplication models.Application
 
 	if err := c.Bind(&addApplication); err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
-			Code:    422,
-			Message: "Gagal",
+		return c.JSON(http.StatusBadRequest, &models.Response{
+			Code:    400,
+			Message: "Data tidak valid!",
 			Status:  false,
 		})
 	}
@@ -33,7 +33,7 @@ func AddApplication(c echo.Context) error {
 		log.Print(err)
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
-			Message: "Terjadi kesalahan internal server",
+			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
 			Status:  false,
 		})
 	}

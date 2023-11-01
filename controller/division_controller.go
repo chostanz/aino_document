@@ -12,7 +12,11 @@ import (
 func AddDivision(c echo.Context) error {
 	var addDivision models.Division
 	if err := c.Bind(&addDivision); err != nil {
-		return c.JSON(http.StatusUnprocessableEntity, "Error")
+		return c.JSON(http.StatusBadRequest, &models.Response{
+			Code:    400,
+			Message: "Data tidak valid!",
+			Status:  false,
+		})
 	}
 
 	err := c.Validate(&addDivision)
@@ -28,7 +32,7 @@ func AddDivision(c echo.Context) error {
 		log.Print(err)
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
-			Message: "Terjadi kesalahan internal server",
+			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
 			Status:  false,
 		})
 	}

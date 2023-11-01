@@ -12,13 +12,19 @@ import (
 func AddAppRole(c echo.Context) error {
 	var addAppRole models.ApplicationRole
 
-	c.Bind(&addAppRole)
+	if errBind := c.Bind(&addAppRole); errBind != nil {
+		return c.JSON(http.StatusBadRequest, &models.Response{
+			Code:    400,
+			Message: "Data tidak valid!",
+			Status:  false,
+		})
+	}
 
 	if err := service.AddApplicationRole(addAppRole); err != nil {
 		log.Print(err)
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
-			Message: "Terjadi kesalahan internal server",
+			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
 			Status:  false,
 		})
 	}

@@ -12,19 +12,25 @@ import (
 func AddRole(c echo.Context) error {
 	var addRole models.Role
 
-	c.Bind(&addRole)
+	if err := c.Bind(&addRole); err != nil {
+		return c.JSON(http.StatusBadRequest, &models.Response{
+			Code:    400,
+			Message: "Data tidak valid!",
+			Status:  false,
+		})
+	}
 
 	if err := service.AddRole(addRole); err != nil {
 		log.Print(err)
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
-			Message: "Terjadi kesalahan internal server",
+			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
 			Status:  false,
 		})
 	}
 	return c.JSON(http.StatusCreated, &models.Response{
 		Code:    201,
-		Message: "Berhasil menambahkan Role!",
+		Message: "Berhasil menambahkan role!",
 		Status:  true,
 	})
 }

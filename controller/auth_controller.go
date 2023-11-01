@@ -4,15 +4,18 @@ import (
 	"aino_document/models"
 	"aino_document/service"
 	"aino_document/utils"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/badoux/checkmail"
+	jose "github.com/dvsekhvalnov/jose2go"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
+	"github.com/lib/pq"
 
 	_ "github.com/dgrijalva/jwt-go"
 )
@@ -22,10 +25,10 @@ type TokenCheck struct {
 }
 
 type JwtCustomClaims struct {
-	UserId             int `json:"user_id"`
-	AppRoleId          int `json:"application_role_id"`
-	DivisionId         int `json:"division_id"`
-	jwt.StandardClaims     // Embed the StandardClaims struct
+	UserId int `json:"user_id"`
+	// AppRoleId          int `json:"application_role_id"`
+	// DivisionId         int `json:"division_id"`
+	jwt.StandardClaims // Embed the StandardClaims struct
 
 }
 
@@ -35,7 +38,14 @@ func RegisterUser(c echo.Context) error {
 
 	var userRegister models.Register
 
-	c.Bind(&userRegister)
+	if errBind := c.Bind(&userRegister); errBind != nil {
+		return c.JSON(http.StatusBadRequest, &models.Response{
+			Code:    400,
+			Message: "Data tidak valid!",
+			Status:  false,
+		})
+	}
+
 	errEmail := checkmail.ValidateFormat(userRegister.Email)
 	if errEmail != nil {
 		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
@@ -50,7 +60,6 @@ func RegisterUser(c echo.Context) error {
 	if err == nil {
 		registerErr := service.RegisterUser(userRegister)
 		if registerErr != nil {
-
 			if validationErr, ok := registerErr.(*service.ValidationError); ok {
 				if validationErr.Tag == "strong_password" {
 					return c.JSON(http.StatusUnprocessableEntity, &models.Response{
@@ -59,17 +68,21 @@ func RegisterUser(c echo.Context) error {
 						Status:  false,
 					})
 				}
+			} else if dbErr, ok := registerErr.(*pq.Error); ok {
+				// Check for duplicate key violation (unique constraint violation)
+				if dbErr.Code.Name() == "unique_violation" {
+					return c.JSON(http.StatusBadRequest, &models.Response{
+						Code:    400,
+						Message: "Username atau email telah digunakan!",
+						Status:  false,
+					})
+				}
 			}
-			log.Print(registerErr)
-			return c.JSON(http.StatusBadRequest, &models.Response{
-				Code:    400,
-				Message: "Username atau email telah digunakan!",
-				Status:  false,
-			})
 		}
+		log.Print(registerErr)
 		return c.JSON(http.StatusCreated, &models.Response{
 			Code:    201,
-			Message: "Berhasil register",
+			Message: "Berhasil membuat akun!",
 			Status:  true,
 		})
 	} else {
@@ -87,7 +100,13 @@ func Login(c echo.Context) error {
 	e.Validator = &utils.CustomValidator{Validator: validator.New()}
 
 	var loginbody models.Login
-	c.Bind(&loginbody)
+	if errBind := c.Bind(&loginbody); errBind != nil {
+		return c.JSON(http.StatusBadRequest, &models.Response{
+			Code:    400,
+			Message: "Data tidak valid!",
+			Status:  false,
+		})
+	}
 
 	err := c.Validate(&loginbody)
 
@@ -99,7 +118,7 @@ func Login(c echo.Context) error {
 		})
 	}
 
-	user_id, isAuthentication, application_role_id, division_id, _ := service.Login(loginbody)
+	user_id, isAuthentication, _ := service.Login(loginbody)
 
 	fmt.Println("isAuthentication:", isAuthentication)
 
@@ -113,30 +132,54 @@ func Login(c echo.Context) error {
 		})
 	}
 	claims := &JwtCustomClaims{
-		UserId:     user_id,
-		AppRoleId:  application_role_id,
-		DivisionId: division_id,
+		UserId: user_id,
+		// AppRoleId:  application_role_id,
+		// DivisionId: division_id,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 12).Unix(), // Tambahkan waktu kadaluwarsa (15 menit)
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	t, err := token.SignedString([]byte("rahasia"))
-	fmt.Println("token:", t)
+	// token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// secretKey := []byte("secretKeyJWT")
+	// t, err := token.SignedString(secretKey)
+	// fmt.Println("token:", t)
+	// if err != nil {
+	// 	return c.JSON(http.StatusInternalServerError, &models.ResponseLogin{
+	// 		Code:    500,
+	// 		Message: "Gagal membuat token. Mohon coba beberapa saat lagi!",
+	// 		Status:  false,
+	// 	})
+	// }
+
+	// Mengonversi claims ke format JSON
+	claimData, err := json.Marshal(claims)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, &models.ResponseLogin{
-			Code:    500,
-			Message: "Gagal membuat token. Mohon coba beberapa saat lagi!",
-			Status:  false,
-		})
+		fmt.Println("Gagal mengonversi klaim:", err)
 	}
 
+	// Buat token JWT dengan enkripsi JWE
+	secretKey := "secretJwToken" // Ganti dengan kunci
+	jweToken, err := jose.Encrypt(string(claimData), jose.PBES2_HS256_A128KW, jose.A128GCM, secretKey)
+	if err != nil {
+		fmt.Println("Gagal membuat token:", err)
+	}
+
+	fmt.Println("Token JWE:", jweToken)
+
+	// Decode token JWE
+	decodedToken, _, err := jose.Decode(jweToken, secretKey)
+	if err != nil {
+		fmt.Println("Gagal mendekripsi token:", err)
+	}
+
+	// Tampilkan token yang telah dideskripsi
+	fmt.Println("Token yang telah dideskripsi:", decodedToken)
 	return c.JSON(http.StatusOK, &models.ResponseLogin{
 		Code:    200,
 		Message: "Berhasil login",
 		Status:  true,
-		Token:   t,
+		Token:   jweToken,
 	})
 
 }
@@ -158,7 +201,7 @@ func Logout(c echo.Context) error {
 
 	// Buat token yang sudah kadaluwarsa
 	expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	_, err := expiredToken.SignedString([]byte("rahasia"))
+	_, err := expiredToken.SignedString([]byte("secretJwtToken"))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
@@ -169,6 +212,7 @@ func Logout(c echo.Context) error {
 
 	// c.Response().Header().Set("Authorization", tokenString)
 
+	log.Print(err)
 	return c.JSON(http.StatusOK, &models.Response{
 		Code:    200,
 		Message: "Logout successful",
