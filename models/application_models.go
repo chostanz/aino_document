@@ -7,8 +7,8 @@ import (
 
 type Application struct {
 	Id          int            `json:"application_id" db:"application_id"`
-	Code        string         `json:"application_code" db:"application_code"`
-	Title       string         `json:"application_title" db:"application_title"`
+	Code        string         `json:"application_code" db:"application_code" validate:"required"`
+	Title       string         `json:"application_title" db:"application_title" validate:"required"`
 	Description string         `json:"application_description" db:"application_description"`
 	Order       int            `json:"application_order" db:"application_order"`
 	Show        bool           `json:"application_show" db:"application_show"`

@@ -10,8 +10,8 @@ import (
 type Division struct {
 	Id         int            `json:"division_id" db:"division_id"`
 	UUID       uuid.UUID      `json:"division_uuid" db:"division_uuid"`
-	Code       string         `json:"division_code" db:"division_code"`
-	Title      string         `json:"division_title" db:"division_title"`
+	Code       string         `json:"division_code" db:"division_code" validate:"required"`
+	Title      string         `json:"division_title" db:"division_title" validate:"required"`
 	Order      int            `json:"division_order" db:"division_order"`
 	Show       bool           `json:"division_show" db:"division_show"`
 	Created_by string         `json:"created_by" db:"created_by"`

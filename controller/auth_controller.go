@@ -78,6 +78,11 @@ func RegisterUser(c echo.Context) error {
 					})
 				}
 			}
+			return c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
+				Status:  false,
+			})
 		}
 		log.Print(registerErr)
 		return c.JSON(http.StatusCreated, &models.Response{

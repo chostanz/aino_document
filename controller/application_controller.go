@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/lib/pq"
 )
 
 func AddApplication(c echo.Context) error {
@@ -31,6 +32,15 @@ func AddApplication(c echo.Context) error {
 
 	if err := service.AddApplication(addApplication); err != nil {
 		log.Print(err)
+		if dbErr, ok := err.(*pq.Error); ok {
+			if dbErr.Code.Name() == "unique_violation" {
+				return c.JSON(http.StatusBadRequest, &models.Response{
+					Code:    400,
+					Message: "Gagal menambahkan application. Application sudah ada!",
+					Status:  false,
+				})
+			}
+		}
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
 			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",

@@ -10,8 +10,8 @@ import (
 type Role struct {
 	Id         int            `json:"role_id" db:"role_id"`
 	UUID       uuid.UUID      `json:"role_uuid" db:"role_uuid"`
-	Code       string         `json:"role_code" db:"role_id"`
-	Title      string         `json:"role_title" db:"role_title"`
+	Code       string         `json:"role_code" db:"role_id" validate:"required"`
+	Title      string         `json:"role_title" db:"role_title" validate:"required"`
 	Order      int            `json:"role_order" db:"role_order"`
 	Show       bool           `json:"role_show" db:"role_show"`
 	Created_by string         `json:"created_by" db:"created_by"`

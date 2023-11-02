@@ -20,6 +20,15 @@ func AddAppRole(c echo.Context) error {
 		})
 	}
 
+	errVal := c.Validate(addAppRole)
+	if errVal != nil {
+		log.Print(errVal)
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Data tidak boleh kosong!",
+			Status:  false,
+		})
+	}
 	if err := service.AddApplicationRole(addAppRole); err != nil {
 		log.Print(err)
 		return c.JSON(http.StatusInternalServerError, &models.Response{
