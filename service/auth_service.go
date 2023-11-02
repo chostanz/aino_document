@@ -59,27 +59,46 @@ func RegisterUser(userRegister models.Register) error {
 	if err != nil {
 		return err
 	}
-
-	var applicationRoles models.ApplicationRole
-	var application_role_id int
-	err = db.Get(&applicationRoles, "SELECT application_role_id FROM application_role_ms WHERE application_id = $1", applicationRoles.Application_role_id)
+	var applicationRoles []models.UserAppRole
+	// Mengambil application_role_id dari database
+	rows, err := db.Query("SELECT application_role_id FROM application_role_ms WHERE application_id = $1", userRegister.ApplicationRole.Application_id)
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
-	var division models.Division
-	var division_id int
-	err = db.Get(&division_id, "SELECT division_id FROM division_ms WHERE division_code = $1", division.Id)
+	for rows.Next() {
+		var applicationRole models.UserAppRole
+		err := rows.Scan(&applicationRole.Application_role_id)
+		if err != nil {
+			fmt.Println("Error scanning row:", err)
+			return err
+		}
+		applicationRoles = append(applicationRoles, applicationRole)
+	}
+
+	// Mengambil division_id dari database
+	rowsDivision, err := db.Query("SELECT division_id FROM division_ms WHERE division_code = $1", userRegister.ApplicationRole.Division_code)
 	if err != nil {
 		return err
 	}
+	defer rowsDivision.Close()
 
-	//var applicationRole models.UserAppRole
-	_, err = db.Exec("INSERT INTO user_application_role_ms(user_id, application_role_id, division_id) VALUES ($1, $2, $3)", user_id, application_role_id, division_id)
-	if err != nil {
-		return err
+	for rowsDivision.Next() {
+		err := rowsDivision.Scan(&applicationRoles[0].Division_id) // Asumsikan Anda ingin mengisi division_id ke dalam slice pertama saja
+		if err != nil {
+			fmt.Println("Error scanning row:", err)
+			return err
+		}
 	}
 
+	for _, applicationRole := range applicationRoles {
+		_, err := db.Exec("INSERT INTO user_application_role_ms(user_id, application_role_id, division_id) VALUES ($1, $2, $3)", user_id, applicationRole.Application_role_id, applicationRole.Division_id)
+		if err != nil {
+			fmt.Println("Error inserting data:", err)
+			return err
+		}
+	}
 	return nil
 }
 

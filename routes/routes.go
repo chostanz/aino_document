@@ -14,6 +14,9 @@ func Route() *echo.Echo {
 	r.POST("/division/add", controller.AddDivision)
 	r.POST("/application/role/add", controller.AddAppRole)
 	r.POST("/role/add", controller.AddRole)
+
+	r.GET("user/application/role", controller.GetUserAppRole)
+
 	r.POST("/login", controller.Login)
 	r.POST("logout", controller.Logout)
 	return r
