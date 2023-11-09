@@ -32,6 +32,9 @@ type JwtCustomClaims struct {
 
 }
 
+// Simpan token yang tidak valid dalam bentuk set
+var InvalidTokens = make(map[string]struct{})
+
 func RegisterUser(c echo.Context) error {
 	e := echo.New()
 	e.Validator = &utils.CustomValidator{Validator: validator.New()}
@@ -168,13 +171,13 @@ func Login(c echo.Context) error {
 	fmt.Println("Token JWE:", jweToken)
 
 	// Decode token JWE
-	decodedToken, _, err := jose.Decode(jweToken, secretKey)
-	if err != nil {
-		fmt.Println("Gagal mendekripsi token:", err)
-	}
+	// decodedToken, _, err := jose.Decode(jweToken, secretKey)
+	// if err != nil {
+	// 	fmt.Println("Gagal mendekripsi token:", err)
+	// }
 
-	// Tampilkan token yang telah dideskripsi
-	fmt.Println("Token yang telah dideskripsi:", decodedToken)
+	// // Tampilkan token yang telah dideskripsi
+	// fmt.Println("Token yang telah dideskripsi:", decodedToken)
 	return c.JSON(http.StatusOK, &models.ResponseLogin{
 		Code:    200,
 		Message: "Berhasil login",
@@ -185,37 +188,29 @@ func Login(c echo.Context) error {
 }
 
 func Logout(c echo.Context) error {
-	// token := c.Request().Header.Get("Authorization") // Anda harus menyesuaikan ini sesuai dengan bagaimana token disimpan
+	tokenString := c.Request().Header.Get("Authorization")
 
-	// if token == "" {
-	// 	return c.JSON(http.StatusUnauthorized, map[string]string{
-	// 		"message": "Token not found",
-	// 	})
-	// }
-
-	claims := &JwtCustomClaims{
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Unix(),
-		},
+	if tokenString == "" {
+		return c.JSON(http.StatusUnauthorized, &models.Response{
+			Code:    401,
+			Message: "Token tidak ditemukan",
+			Status:  false,
+		})
 	}
-
-	// Buat token yang sudah kadaluwarsa
-	expiredToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	_, err := expiredToken.SignedString([]byte("secretJwtToken"))
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, &models.Response{
-			Code:    500,
-			Message: "Failed to create an invalid token. Please try again later.",
+	_, exists := InvalidTokens[tokenString]
+	if exists {
+		return c.JSON(http.StatusUnauthorized, &models.Response{
+			Code:    401,
+			Message: "Token tidak valid atau Anda telah logout",
 			Status:  false,
 		})
 	}
 
-	// c.Response().Header().Set("Authorization", tokenString)
+	InvalidTokens[tokenString] = struct{}{}
 
-	log.Print(err)
 	return c.JSON(http.StatusOK, &models.Response{
 		Code:    200,
-		Message: "Logout successful",
+		Message: "Berhasil Logout!",
 		Status:  true,
 	})
 }
