@@ -4,6 +4,7 @@ import (
 	"aino_document/models"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,7 +21,7 @@ func (ve *ValidationError) Error() string {
 	return ve.Message
 }
 
-func RegisterUser(userRegister models.Register) error {
+func RegisterUser(userRegister models.Register, userID int) error {
 	if len(userRegister.Password) < 8 {
 		return &ValidationError{
 			Message: "Password should be of 8 characters long",
@@ -36,8 +37,14 @@ func RegisterUser(userRegister models.Register) error {
 	fmt.Println(hashedPassword)
 	fmt.Println(hashedPasswordStr)
 
+	username, errP := GetUsernameByID(userID)
+	if errP != nil {
+		return errP
+	}
 	currentTimestamp := time.Now().UnixNano() / int64(time.Microsecond)
 	uniqueID := uuid.New().ID()
+	// uuid := uuid.New()
+	// user_id := uuid.ID()
 
 	user_id := currentTimestamp + int64(uniqueID)
 	uuid := uuid.New()
@@ -48,7 +55,7 @@ func RegisterUser(userRegister models.Register) error {
 		"user_name":     userRegister.Username,
 		"user_email":    userRegister.Email,
 		"user_password": hashedPasswordStr,
-		"created_by":    userRegister.Created_by,
+		"created_by":    username,
 	})
 
 	if errInsert != nil {
@@ -59,6 +66,12 @@ func RegisterUser(userRegister models.Register) error {
 	if err != nil {
 		return err
 	}
+	// Cetak nilai user_id dari middleware
+	fmt.Println("Middleware UserID:", userID)
+
+	// Cetak nilai user_id yang ingin dimasukkan ke dalam database
+	fmt.Println("Database UserID:", user_id)
+
 	var applicationRoles []models.UserAppRole
 	// Mengambil application_role_id dari database
 	rows, err := db.Query("SELECT application_role_id FROM application_role_ms WHERE application_id = $1", userRegister.ApplicationRole.Application_id)
@@ -80,6 +93,7 @@ func RegisterUser(userRegister models.Register) error {
 	// Mengambil division_id dari database
 	rowsDivision, err := db.Query("SELECT division_id FROM division_ms WHERE division_code = $1", userRegister.ApplicationRole.Division_code)
 	if err != nil {
+		log.Println("gabisa ambil division_id", err)
 		return err
 	}
 	defer rowsDivision.Close()
@@ -95,7 +109,7 @@ func RegisterUser(userRegister models.Register) error {
 	for _, applicationRole := range applicationRoles {
 		_, err := db.Exec("INSERT INTO user_application_role_ms(user_id, application_role_id, division_id) VALUES ($1, $2, $3)", user_id, applicationRole.Application_role_id, applicationRole.Division_id)
 		if err != nil {
-			fmt.Println("Error inserting data:", err)
+			log.Println("Error inserting data into user_application_role_ms:", err)
 			return err
 		}
 	}
@@ -108,14 +122,14 @@ func Login(userLogin models.Login) (int, bool, error) {
 	// var application_role_id int
 	// var division_id int
 
-	rows, err := db.Query("SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END FROM user_ms WHERE user_name = $1 AND user_password = $2", userLogin.Username, userLogin.Password)
+	rows, err := db.Query("SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END FROM user_ms WHERE user_email = $1 AND user_password = $2", userLogin.Email, userLogin.Password)
 	if err != nil {
 		return 0, false, err
 	}
 
 	defer rows.Close()
 
-	rows, err = db.Query("SELECT user_id, user_password from user_ms where user_name = $1", userLogin.Username)
+	rows, err = db.Query("SELECT user_id, user_password from user_ms where user_email = $1", userLogin.Email)
 	if err != nil {
 		fmt.Println("Error querying users:", err)
 		return 0, false, err

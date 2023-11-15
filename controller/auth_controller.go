@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/badoux/checkmail"
@@ -39,6 +40,57 @@ func RegisterUser(c echo.Context) error {
 	e := echo.New()
 	e.Validator = &utils.CustomValidator{Validator: validator.New()}
 
+	tokenString := c.Request().Header.Get("Authorization")
+	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+
+	// Periksa apakah tokenString tidak kosong
+	if tokenString == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak ditemukan!",
+			"status":  false,
+		})
+	}
+
+	// Periksa apakah tokenString mengandung "Bearer "
+	if !strings.HasPrefix(tokenString, "Bearer ") {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+
+	// Hapus "Bearer " dari tokenString
+	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
+
+	// Langkah 1: Mendekripsi token JWE
+	decrypted, errDec := DecryptJWE(tokenOnly, secretKey)
+	if errDec != nil {
+		fmt.Println("Gagal mendekripsi token:", errDec)
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+
+	var claims JwtCustomClaims
+	errJ := json.Unmarshal([]byte(decrypted), &claims)
+	if errJ != nil {
+		fmt.Println("Gagal mengurai klaim:", errJ)
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+	userID := c.Get("user_id").(int)
+	_, errK := service.GetUserInfoFromToken(tokenOnly)
+	if errK != nil {
+		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
+	}
+
 	var userRegister models.Register
 
 	if errBind := c.Bind(&userRegister); errBind != nil {
@@ -61,7 +113,7 @@ func RegisterUser(c echo.Context) error {
 	err := c.Validate(&userRegister)
 
 	if err == nil {
-		registerErr := service.RegisterUser(userRegister)
+		registerErr := service.RegisterUser(userRegister, userID)
 		if registerErr != nil {
 			if validationErr, ok := registerErr.(*service.ValidationError); ok {
 				if validationErr.Tag == "strong_password" {
@@ -74,6 +126,7 @@ func RegisterUser(c echo.Context) error {
 			} else if dbErr, ok := registerErr.(*pq.Error); ok {
 				// Check for duplicate key violation (unique constraint violation)
 				if dbErr.Code.Name() == "unique_violation" {
+					log.Println(dbErr)
 					return c.JSON(http.StatusBadRequest, &models.Response{
 						Code:    400,
 						Message: "Username atau email telah digunakan!",
@@ -114,6 +167,7 @@ func Login(c echo.Context) error {
 	err := c.Validate(&loginbody)
 
 	if err != nil {
+		log.Println(err)
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
 			Message: "Terjadi kesalahan pada internal server. Coba beberapa saat lagi!",
@@ -121,7 +175,7 @@ func Login(c echo.Context) error {
 		})
 	}
 
-	user_id, isAuthentication, _ := service.Login(loginbody)
+	user_id, isAuthentication, _ := service.Login(loginbody) //bagian siniii dikasih role_id ama yg laen
 
 	fmt.Println("isAuthentication:", isAuthentication)
 
@@ -188,6 +242,17 @@ func Login(c echo.Context) error {
 }
 
 func Logout(c echo.Context) error {
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Panic occurred:", r)
+			c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Internal Server Error",
+				Status:  false,
+			})
+		}
+	}()
 	tokenString := c.Request().Header.Get("Authorization")
 
 	if tokenString == "" {

@@ -8,10 +8,11 @@ import (
 )
 
 type Login struct {
-	Username         string `json:"user_name" db:"user_name" validate:"required"`
+	Username         string `json:"user_name" db:"user_name"`
 	Password         string `json:"user_password" db:"user_password" validate:"required"`
 	Application_Role int    `json:"application_role_id" db:"application_role_id"`
 	Division         int    `json:"division_id" db:"division_id"`
+	Email            string `json:"user_email" db:"user_email" validate:"required"`
 }
 
 type Register struct {
