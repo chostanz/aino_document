@@ -68,10 +68,14 @@ func AddApplication(addApplication models.Application, userUUID string) error {
 	currentTimestamp := time.Now().UnixNano() / int64(time.Microsecond)
 	uniqueID := uuid.New().ID()
 
+	uuid := uuid.New()
+	uuidString := uuid.String()
+
 	app_id := currentTimestamp + int64(uniqueID)
 
-	_, err := db.NamedExec("INSERT INTO application_ms (application_id, application_code, application_title, application_description, created_by) VALUES (:application_id, :application_code, :application_title, :application_description, :created_by)", map[string]interface{}{
+	_, err := db.NamedExec("INSERT INTO application_ms (application_id, application_uuid, application_code, application_title, application_description, created_by) VALUES (:application_id, :application_uuid, :application_code, :application_title, :application_description, :created_by)", map[string]interface{}{
 		"application_id":          app_id,
+		"application_uuid":        uuidString,
 		"application_code":        addApplication.Code,
 		"application_title":       addApplication.Title,
 		"application_description": addApplication.Description,

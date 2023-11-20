@@ -91,13 +91,13 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 
 	// Mendapatkan role_id yang baru saja diinsert
 	var roleID int64
-	err = db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_code = $1", userRegister.ApplicationRole.Role_code)
+	err = db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_uuid = $1", userRegister.ApplicationRole.Role_UUID)
 	if err != nil {
 		log.Println("Error getting role_id:", err)
 		return err
 	}
 	var applicationID int64
-	err = db.Get(&applicationID, "SELECT application_id FROM application_ms WHERE application_code = $1", userRegister.ApplicationRole.Application_code)
+	err = db.Get(&applicationID, "SELECT application_id FROM application_ms WHERE application_uuid = $1", userRegister.ApplicationRole.Application_UUID)
 	if err != nil {
 		log.Println("Error getting application_id:", err)
 		return err
@@ -105,7 +105,7 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 
 	// Get division_id
 	var divisionID int64
-	err = db.Get(&divisionID, "SELECT division_id FROM division_ms WHERE division_code = $1", userRegister.ApplicationRole.Division_code)
+	err = db.Get(&divisionID, "SELECT division_id FROM division_ms WHERE division_uuid = $1", userRegister.ApplicationRole.Division_UUID)
 	if err != nil {
 		log.Println("Error fetching division_id:", err)
 		return err
@@ -132,7 +132,7 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	log.Println("Application Role ID:", applicationRoleID)
 
 	// Insert user_application_role_ms data
-	_, err = db.Exec("INSERT INTO user_application_role_ms(user_id, application_role_id, division_id) VALUES ($1, $2, $3)", user_id, applicationRoleID, divisionID)
+	_, err = db.Exec("INSERT INTO user_application_role_ms(user_application_role_uuid, user_id, application_role_id, division_id) VALUES ($1, $2, $3, $4)", uuidString, user_id, applicationRoleID, divisionID)
 	if err != nil {
 		log.Println("Error inserting data into user_application_role_ms:", err)
 		return err

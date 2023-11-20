@@ -18,7 +18,7 @@ func Route() *echo.Echo {
 
 	adminGroup := r.Group("/admin")
 	adminGroup.Use(middleware.AdminMiddleware)
-	adminGroup.GET("/user/application/role", controller.GetUserAppRole)
+	// adminGroup.GET("/user/application/role", controller.GetUserAppRole)
 	adminGroup.POST("/application/add", controller.AddApplication)
 	adminGroup.POST("/application/role/add", controller.AddAppRole)
 	adminGroup.POST("/division/add", controller.AddDivision)

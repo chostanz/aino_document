@@ -6,6 +6,7 @@ import (
 )
 
 type Application struct {
+	UUID        string         `json:"application_uuid" db:"application_uuid"`
 	Id          int            `json:"application_id" db:"application_id"`
 	Code        string         `json:"application_code" db:"application_code" validate:"required"`
 	Title       string         `json:"application_title" db:"application_title" validate:"required"`
@@ -21,6 +22,7 @@ type Application struct {
 }
 
 type Applications struct {
+	UUID        string         `json:"application_uuid" db:"application_uuid"`
 	Order       int            `json:"application_order" db:"application_order"`
 	Code        string         `json:"application_code" db:"application_code" validate:"required"`
 	Title       string         `json:"application_title" db:"application_title" validate:"required"`
