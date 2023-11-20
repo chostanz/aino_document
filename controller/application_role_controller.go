@@ -60,7 +60,7 @@ func AddAppRole(c echo.Context) error {
 			"status":  false,
 		})
 	}
-	userID := c.Get("user_id").(int)
+	userUUID := c.Get("user_uuid").(string)
 	_, errK := service.GetUserInfoFromToken(tokenOnly)
 	if errK != nil {
 		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
@@ -85,7 +85,7 @@ func AddAppRole(c echo.Context) error {
 			Status:  false,
 		})
 	}
-	if err := service.AddApplicationRole(addAppRole, userID); err != nil {
+	if err := service.AddApplicationRole(addAppRole, userUUID); err != nil {
 		log.Print(err)
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,

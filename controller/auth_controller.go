@@ -26,10 +26,12 @@ type TokenCheck struct {
 }
 
 type JwtCustomClaims struct {
-	UserId int `json:"user_id"`
+	UserID   int    `json:"user_id"`
+	UserUUID string `json:"user_uuid"`
+	RoleCode string `json:"role_code"`
 	// AppRoleId          int `json:"application_role_id"`
-	// DivisionId         int `json:"division_id"`
-	jwt.StandardClaims // Embed the StandardClaims struct
+	DivisionCode       string `json:"division_code"`
+	jwt.StandardClaims        // Embed the StandardClaims struct
 
 }
 
@@ -85,7 +87,7 @@ func RegisterUser(c echo.Context) error {
 			"status":  false,
 		})
 	}
-	userID := c.Get("user_id").(int)
+	userUUID := c.Get("user_uuid").(string)
 	_, errK := service.GetUserInfoFromToken(tokenOnly)
 	if errK != nil {
 		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
@@ -113,7 +115,7 @@ func RegisterUser(c echo.Context) error {
 	err := c.Validate(&userRegister)
 
 	if err == nil {
-		registerErr := service.RegisterUser(userRegister, userID)
+		registerErr := service.RegisterUser(userRegister, userUUID)
 		if registerErr != nil {
 			if validationErr, ok := registerErr.(*service.ValidationError); ok {
 				if validationErr.Tag == "strong_password" {
@@ -135,7 +137,7 @@ func RegisterUser(c echo.Context) error {
 				}
 			}
 		}
-		log.Print(registerErr)
+		// log.Print(registerErr)
 		return c.JSON(http.StatusCreated, &models.Response{
 			Code:    201,
 			Message: "Berhasil membuat akun!",
@@ -175,7 +177,7 @@ func Login(c echo.Context) error {
 		})
 	}
 
-	user_id, isAuthentication, _ := service.Login(loginbody) //bagian siniii dikasih role_id ama yg laen
+	user_uuid, role_code, division_code, user_id, isAuthentication, _ := service.Login(loginbody) //bagian siniii dikasih role_id ama yg laen
 
 	fmt.Println("isAuthentication:", isAuthentication)
 
@@ -189,9 +191,11 @@ func Login(c echo.Context) error {
 		})
 	}
 	claims := &JwtCustomClaims{
-		UserId: user_id,
+		UserUUID: user_uuid,
+		UserID:   user_id,
+		RoleCode: role_code,
 		// AppRoleId:  application_role_id,
-		// DivisionId: division_id,
+		DivisionCode: division_code,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 12).Unix(), // Tambahkan waktu kadaluwarsa (15 menit)
 		},

@@ -61,7 +61,7 @@ func AddRole(c echo.Context) error {
 			"status":  false,
 		})
 	}
-	userID := c.Get("user_id").(int)
+	userUUID := c.Get("user_uuid").(string)
 	_, errK := service.GetUserInfoFromToken(tokenOnly)
 	if errK != nil {
 		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
@@ -80,7 +80,7 @@ func AddRole(c echo.Context) error {
 	errVal := c.Validate(&addRole)
 
 	if errVal == nil {
-		addroleErr := service.AddRole(addRole, userID)
+		addroleErr := service.AddRole(addRole, userUUID)
 		if addroleErr != nil {
 			if dbErr, ok := addroleErr.(*pq.Error); ok {
 				if dbErr.Code.Name() == "unique_violation" {

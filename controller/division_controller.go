@@ -128,7 +128,7 @@ func AddDivision(c echo.Context) error {
 			"status":  false,
 		})
 	}
-	userID := c.Get("user_id").(int)
+	userUUID := c.Get("user_uuid").(string)
 	_, errK := service.GetUserInfoFromToken(tokenOnly)
 	if errK != nil {
 		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
@@ -152,7 +152,7 @@ func AddDivision(c echo.Context) error {
 		})
 	}
 
-	if err = service.AddDivision(addDivision, userID); err != nil {
+	if err = service.AddDivision(addDivision, userUUID); err != nil {
 		log.Print(err)
 		if dbErr, ok := err.(*pq.Error); ok {
 			if dbErr.Code.Name() == "unique_violation" {

@@ -54,8 +54,8 @@ func GetDivisionById(id int) (models.Division, error) {
 
 }
 
-func AddDivision(addDivision models.Division, userID int) error {
-	username, errP := GetUsernameByID(userID)
+func AddDivision(addDivision models.Division, userUUID string) error {
+	username, errP := GetUsernameByID(userUUID)
 	if errP != nil {
 		return errP
 	}

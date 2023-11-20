@@ -13,7 +13,7 @@ import (
 )
 
 type JwtCustomClaims struct {
-	UserId int `json:"user_id"`
+	UserUUID string `json:"user_uuid"`
 	// AppRoleId          int `json:"application_role_id"`
 	// DivisionId         int `json:"division_id"`
 	jwt.StandardClaims // Embed the StandardClaims struct
@@ -29,22 +29,22 @@ func DecryptJWE(jweToken string, secretKey string) (string, error) {
 	return decrypted, nil
 }
 
-func GetUsernameByID(userID int) (string, error) {
+func GetUsernameByID(userUUID string) (string, error) {
 	var username string
-	err := db.QueryRow("SELECT user_name from user_ms WHERE user_id = $1", userID).Scan(&username)
+	err := db.QueryRow("SELECT user_name from user_ms WHERE user_uuid = $1", userUUID).Scan(&username)
 	if err != nil {
 		return "", err
 	}
 	return username, nil
 }
 
-func GetUserInfoFromToken(tokenStr string) (int, error) {
+func GetUserInfoFromToken(tokenStr string) (string, error) {
 	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
 
 	decrypted, err := DecryptJWE(tokenStr, secretKey)
 	if err != nil {
 		fmt.Println("Gagal mendekripsi token:", err)
-		return 0, err
+		return "", err
 	}
 
 	fmt.Println("Token yang sudah dideskripsi:", decrypted)
@@ -53,15 +53,15 @@ func GetUserInfoFromToken(tokenStr string) (int, error) {
 	errJ := json.Unmarshal([]byte(decrypted), &claims)
 	if errJ != nil {
 		fmt.Println("Gagal mengurai klaim:", errJ)
-		return 0, errJ
+		return "", errJ
 	}
 
-	userID := claims.UserId // Mengakses UserID langsung
-	return userID, nil
+	userUUID := claims.UserUUID // Mengakses UserID langsung
+	return userUUID, nil
 }
 
-func AddApplication(addApplication models.Application, userID int) error {
-	username, errP := GetUsernameByID(userID)
+func AddApplication(addApplication models.Application, userUUID string) error {
+	username, errP := GetUsernameByID(userUUID)
 	if errP != nil {
 		return errP
 	}

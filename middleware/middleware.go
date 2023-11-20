@@ -4,6 +4,7 @@ import (
 	"aino_document/models"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -13,10 +14,12 @@ import (
 )
 
 type JwtCustomClaims struct {
-	UserId int `json:"user_id"`
-	// AppRoleId          int `json:"application_role_id"`
-	// DivisionId         int `json:"division_id"`
-	jwt.StandardClaims // Embed the StandardClaims struct
+	// UserId   int    `json:"user_id"`
+	UserUUID           string `json:"user_uuid"`
+	AppRoleId          int    `json:"application_role_id"`
+	DivisionCode       string `json:"division_code"`
+	RoleCode           string `json:"role_code"`
+	jwt.StandardClaims        // Embed the StandardClaims struct
 
 }
 
@@ -97,14 +100,23 @@ func AdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		// Anda bisa mengakses UserId atau klaim lain sesuai kebutuhan
 		// fmt.Println("UserID:", claims.UserId)
 
-		userID := claims.UserId // Mengakses UserID langsung
-		// roleID := claims.AppRoleId
-		// divisionID := claims.DivisionId
-		fmt.Println("UserID:", userID)
-		// fmt.Println("UserID:", roleID)
-		// fmt.Println("UserID:", divisionID)
-		c.Set("user_id", userID)
-		if userID != 1698660431808322 {
+		userUUID := claims.UserUUID // Mengakses UserID langsung
+		roleID := claims.AppRoleId
+		divisionCode := claims.DivisionCode
+		roleCode := claims.RoleCode
+		if roleCode != "" {
+			log.Print(roleCode)
+		}
+
+		fmt.Println("User UUID:", userUUID)
+		fmt.Println("Role Code:", roleCode)
+		fmt.Println("Division Code:", divisionCode)
+
+		c.Set("user_uuid", userUUID)
+		c.Set("application_role_id", roleID)
+		c.Set("divisio_code", divisionCode)
+		c.Set("role_code", roleCode)
+		if roleCode != "SA" {
 			return c.JSON(http.StatusForbidden, &models.Response{
 				Code:    403,
 				Message: "Akses ditolak!",

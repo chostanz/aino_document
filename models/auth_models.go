@@ -28,8 +28,9 @@ type Register struct {
 	Deleted_by      sql.NullString `json:"deleted_by" db:"deleted_by"`
 	Deleted_at      sql.NullTime   `json:"deleted_at" db:"deleted_at"`
 	ApplicationRole struct {
-		Application_id int    `json:"application_id" db:"application_id"`
-		Division_code  string `json:"division_code" db:"division_code"`
+		Application_code string `json:"application_code" db:"application_code"`
+		Role_code        string `json:"role_code" db:"role_code"`
+		Division_code    string `json:"division_code" db:"division_code"`
 	} `json:"applicationRole"`
 }
 

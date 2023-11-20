@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
-func AddApplicationRole(addAppRole models.ApplicationRole, userID int) error {
-	username, errP := GetUsernameByID(userID)
+func AddApplicationRole(addAppRole models.ApplicationRole, userUUID string) error {
+	username, errP := GetUsernameByID(userUUID)
 	if errP != nil {
 		return errP
 	}
