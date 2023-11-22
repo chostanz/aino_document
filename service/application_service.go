@@ -4,6 +4,7 @@ import (
 	"aino_document/models"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -123,5 +124,34 @@ func GetAppById(id int) (models.Application, error) {
 		return models.Application{}, err
 	}
 	return appid, nil
+
+}
+
+func UpdateApp(updateApp models.Application, id int, userUUID string) (models.Application, error) {
+	idStr := strconv.Itoa(id)
+	username, errUser := GetUsernameByID(userUUID)
+	if errUser != nil {
+		log.Print(errUser)
+		return models.Application{}, errUser
+
+	}
+
+	currentTime := time.Now()
+
+	_, err := db.NamedExec("UPDATE application_ms SET application_code = :application_code, application_title = :application_title, application_description = :application_description, updated_by = :updated_by, updated_at = :updated_at WHERE application_order = :id", map[string]interface{}{
+		"application_code":        updateApp.Code,
+		"application_title":       updateApp.Title,
+		"application_description": updateApp.Description,
+		"updated_by":              username,
+		"updated_at":              currentTime,
+		"id":                      idStr,
+	})
+
+	if err != nil {
+		log.Print(err)
+		return models.Application{}, err
+	}
+
+	return updateApp, nil
 
 }

@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/lib/pq"
 )
 
 func AddAppRole(c echo.Context) error {
@@ -66,7 +66,7 @@ func AddAppRole(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
 	}
 
-	var addAppRole models.ApplicationRole
+	var addAppRole models.AddApplicationRole
 
 	if errBind := c.Bind(&addAppRole); errBind != nil {
 		return c.JSON(http.StatusBadRequest, &models.Response{
@@ -101,8 +101,7 @@ func AddAppRole(c echo.Context) error {
 }
 
 func GetAppRole(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
-
+	var id = c.Param("id")
 	var getApp models.ApplicationRole
 
 	getApp, err := service.GetAppRole(id)
@@ -113,6 +112,7 @@ func GetAppRole(c echo.Context) error {
 				Message: "Application tidak ditemukan!",
 				Status:  false,
 			}
+			log.Print(err)
 			return c.JSON(http.StatusNotFound, response)
 		} else {
 			log.Println(err)
@@ -125,4 +125,125 @@ func GetAppRole(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, getApp)
+}
+
+func UpdateAppRole(c echo.Context) error {
+	tokenString := c.Request().Header.Get("Authorization")
+	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+
+	// Periksa apakah tokenString tidak kosong
+	if tokenString == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak ditemukan!",
+			"status":  false,
+		})
+	}
+
+	// Periksa apakah tokenString mengandung "Bearer "
+	if !strings.HasPrefix(tokenString, "Bearer ") {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+
+	// Hapus "Bearer " dari tokenString
+	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
+
+	// Langkah 1: Mendekripsi token JWE
+	decrypted, err := DecryptJWE(tokenOnly, secretKey)
+	if err != nil {
+		fmt.Println("Gagal mendekripsi token:", err)
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+
+	var claims JwtCustomClaims
+	errJ := json.Unmarshal([]byte(decrypted), &claims)
+	if errJ != nil {
+		fmt.Println("Gagal mengurai klaim:", errJ)
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+	userUUID := c.Get("user_uuid").(string)
+	_, errK := service.GetUserInfoFromToken(tokenOnly)
+	if errK != nil {
+		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
+	}
+
+	// id, _ := strconv.Atoi(c.Param("id"))
+	var id = c.Param("id")
+
+	perviousContent, errGet := service.GetAppRole(id)
+	if errGet != nil {
+		return c.JSON(http.StatusInternalServerError, &models.Response{
+			Code:    500,
+			Message: "Gagal mengambil data application saat ini. Mohon coba beberapa saat lagi!",
+			Status:  false,
+		})
+	}
+
+	var editAppRole models.AddApplicationRole
+	if err := c.Bind(&editAppRole); err != nil {
+		return c.JSON(http.StatusBadRequest, &models.Response{
+			Code:    400,
+			Message: "Data invalid!",
+			Status:  false,
+		})
+	}
+
+	errValidate := c.Validate(&editAppRole)
+	if errValidate != nil {
+		return c.JSON(http.StatusInternalServerError, &models.Response{
+			Code:    422,
+			Message: "Data tidak boleh kosong!",
+			Status:  false,
+		})
+	}
+
+	if err == nil {
+		_, errService := service.UpdateAppRole(editAppRole, id, userUUID)
+		if errService != nil {
+			if dbErr, ok := errService.(*pq.Error); ok {
+				// Check for duplicate key violation (unique constraint violation)
+				if dbErr.Code.Name() == "unique_violation" {
+					log.Println(dbErr)
+					return c.JSON(http.StatusBadRequest, &models.Response{
+						Code:    400,
+						Message: "Data sudah ada",
+						Status:  false,
+					})
+				}
+			}
+
+			log.Println("Kesalahan selama pembaruan:", errService)
+			return c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
+				Status:  false,
+			})
+		}
+
+		log.Println(perviousContent)
+		return c.JSON(http.StatusOK, &models.Response{
+			Code:    200,
+			Message: "Application Role telah diperbarui",
+			Status:  true,
+		})
+	} else {
+		log.Println("Kesalahan sebelum pembaruan:", err)
+		return c.JSON(http.StatusInternalServerError, &models.Response{
+			Code:    500,
+			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
+			Status:  false,
+		})
+	}
 }

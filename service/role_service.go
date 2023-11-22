@@ -80,3 +80,29 @@ func GetRoleById(id int) (models.Role, error) {
 	return roleId, nil
 
 }
+
+func UpdateRole(updateRole models.Role, id int, userUUID string) (models.Role, error) {
+	idStr := strconv.Itoa(id)
+	username, errUser := GetUsernameByID(userUUID)
+	if errUser != nil {
+		log.Print(errUser)
+		return models.Role{}, errUser
+
+	}
+
+	currentTime := time.Now()
+
+	_, err := db.NamedExec("UPDATE role_ms SET role_code = :role_code, role_title = :role_title, updated_by = :updated_by, updated_at = :updated_at WHERE role_order = :id", map[string]interface{}{
+		"role_code":  updateRole.Code,
+		"role_title": updateRole.Title,
+		"updated_by": username,
+		"updated_at": currentTime,
+		"id":         idStr,
+	})
+
+	if err != nil {
+		log.Print(err)
+		return models.Role{}, err
+	}
+	return updateRole, nil
+}

@@ -3,13 +3,12 @@ package service
 import (
 	"aino_document/models"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-func AddApplicationRole(addAppRole models.ApplicationRole, userUUID string) error {
+func AddApplicationRole(addAppRole models.AddApplicationRole, userUUID string) error {
 	username, errP := GetUsernameByID(userUUID)
 	if errP != nil {
 		return errP
@@ -47,14 +46,53 @@ func AddApplicationRole(addAppRole models.ApplicationRole, userUUID string) erro
 	return nil
 }
 
-func GetAppRole(id int) (models.ApplicationRole, error) {
+func GetAppRole(id string) (models.ApplicationRole, error) {
 	var appRoleId models.ApplicationRole
-	idStr := strconv.Itoa(id)
+	// idStr := strconv.Itoa(id)
 
-	err := db.Get(&appRoleId, "SELECT application_role_id, application_id, role_id,created_by, created_at, updated_by, updated_at, deleted_by, deleted_at from application_role_ms WHERE application_role_id = $1", idStr)
+	err := db.Get(&appRoleId, "SELECT application_role_id, application_id, role_id, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at from application_role_ms WHERE application_role_uuid = $1", id)
 	if err != nil {
 		return models.ApplicationRole{}, err
 	}
 	return appRoleId, nil
 
+}
+
+func UpdateAppRole(updateAppRole models.AddApplicationRole, id string, userUUID string) (models.AddApplicationRole, error) {
+	username, errUser := GetUsernameByID(userUUID)
+	if errUser != nil {
+		log.Print(errUser)
+		return models.AddApplicationRole{}, errUser
+
+	}
+
+	var roleID int64
+	err := db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_uuid = $1", updateAppRole.Role_UUID)
+	if err != nil {
+		log.Println("Error getting role_id:", err)
+		return models.AddApplicationRole{}, err
+	}
+	var applicationID int64
+	err = db.Get(&applicationID, "SELECT application_id FROM application_ms WHERE application_uuid = $1", updateAppRole.Application_UUID)
+	if err != nil {
+		log.Println("Error getting application_id:", err)
+		return models.AddApplicationRole{}, err
+	}
+
+	currentTime := time.Now()
+
+	_, errUpdate := db.NamedExec("UPDATE application_role_ms SET application_id = :application_id, role_id = :role_id, updated_by = :updated_by, updated_at = :updated_at WHERE application_role_uuid = :id", map[string]interface{}{
+		"application_id": applicationID,
+		"role_id":        roleID,
+		"updated_by":     username,
+		"updated_at":     currentTime,
+		"id":             id,
+	})
+
+	if errUpdate != nil {
+		log.Print(errUpdate)
+		return models.AddApplicationRole{}, err
+	}
+
+	return updateAppRole, nil
 }

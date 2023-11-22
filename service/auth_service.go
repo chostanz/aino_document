@@ -65,30 +65,6 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 		return err
 	}
 
-	// Cetak nilai user_id dari middlewareUU
-	fmt.Println("Middleware UserID:", userUUID)
-
-	// Cetak nilai user_id yang ingin dimasukkan ke dalam database
-	fmt.Println("Database UserID:", user_id)
-
-	// var applicationRoles []models.UserAppRole
-	// // Mengambil application_role_id dari database
-	// rows, err := db.Query("SELECT application_role_id FROM application_role_ms WHERE application_id = $1", userRegister.ApplicationRole.Application_id)
-	// if err != nil {
-	// 	return err
-	// }
-	// defer rows.Close()
-
-	// for rows.Next() {
-	// 	var applicationRole models.UserAppRole
-	// 	err := rows.Scan(&applicationRole.Application_role_id)
-	// 	if err != nil {
-	// 		fmt.Println("Error scanning row:", err)
-	// 		return err
-	// 	}
-	// 	applicationRoles = append(applicationRoles, applicationRole)
-	// }
-
 	// Mendapatkan role_id yang baru saja diinsert
 	var roleID int64
 	err = db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_uuid = $1", userRegister.ApplicationRole.Role_UUID)
@@ -231,4 +207,64 @@ func Login(userLogin models.Login) (string, string, string, int, bool, error) {
 	}
 	return "", "", "", 0, false, nil // Jika tidak ada authentikasi yang berhasil
 
+}
+
+func UpdateUserProfile(userUpdate models.UpdateUser, userUUID string) error {
+	// Dapatkan ID pengguna dari user_ms berdasarkan user_uuid
+	var userID int64
+	err := db.Get(&userID, "SELECT user_id FROM user_ms WHERE user_uuid = $1", userUUID)
+	if err != nil {
+		log.Println("Error getting user ID:", err)
+		return err
+	}
+
+	// Update nama pengguna dan email di tabel user_ms
+	_, err = db.NamedExec("UPDATE user_ms SET user_name = :user_name, user_email = :user_email WHERE user_uuid = :user_uuid",
+		map[string]interface{}{
+			"user_uuid":  userID,
+			"user_name":  userUpdate.Username,
+			"user_email": userUpdate.Email,
+		})
+	if err != nil {
+		log.Println("Error updating user profile in user_ms:", err)
+		return err
+	}
+
+	// Dapatkan role_id, application_id, dan division_id yang sudah ada
+	var roleID, applicationID, divisionID int64
+	err = db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_uuid = $1", userUpdate.ApplicationRole.Role_UUID)
+	if err != nil {
+		log.Println("Error getting role_id:", err)
+		return err
+	}
+
+	err = db.Get(&applicationID, "SELECT application_id FROM application_ms WHERE application_uuid = $1", userUpdate.ApplicationRole.Application_UUID)
+	if err != nil {
+		log.Println("Error getting application_id:", err)
+		return err
+	}
+
+	err = db.Get(&divisionID, "SELECT division_id FROM division_ms WHERE division_uuid = $1", userUpdate.ApplicationRole.Division_UUID)
+	if err != nil {
+		log.Println("Error fetching division_id:", err)
+		return err
+	}
+
+	// Update data di tabel application_role_ms
+	_, err = db.Exec("UPDATE application_role_ms SET application_id = $1, role_id = $2 WHERE user_id = $3",
+		applicationID, roleID, userID)
+	if err != nil {
+		log.Println("Error updating data in application_role_ms:", err)
+		return err
+	}
+
+	// Update data di tabel user_application_role_ms
+	_, err = db.Exec("UPDATE user_application_role_ms SET division_id = $1 WHERE user_id = $2",
+		divisionID, userID)
+	if err != nil {
+		log.Println("Error updating data in user_application_role_ms:", err)
+		return err
+	}
+
+	return nil
 }

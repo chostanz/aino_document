@@ -79,3 +79,28 @@ func AddDivision(addDivision models.Division, userUUID string) error {
 	}
 	return nil
 }
+
+func UpdateDivision(updateDivision models.Division, id int, userUUID string) (models.Division, error) {
+	idStr := strconv.Itoa(id)
+	username, errUser := GetUsernameByID(userUUID)
+	if errUser != nil {
+		log.Print(errUser)
+		return models.Division{}, errUser
+
+	}
+
+	currentTime := time.Now()
+
+	_, err := db.NamedExec("UPDATE division_ms SET division_code = :division_code, division_title = :division_title, updated_by = :updated_by, updated_at = :updated_at WHERE division_order = :id", map[string]interface{}{
+		"division_code":  updateDivision.Code,
+		"division_title": updateDivision.Title,
+		"updated_by":     username,
+		"updated_at":     currentTime,
+		"id":             idStr,
+	})
+	if err != nil {
+		log.Print(err)
+		return models.Division{}, err
+	}
+	return updateDivision, nil
+}
