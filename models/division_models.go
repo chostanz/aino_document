@@ -23,6 +23,7 @@ type Division struct {
 }
 
 type Divisions struct {
+	UUID       string         `json:"division_uuid" db:"division_uuid"`
 	Order      int            `json:"division_order" db:"division_order"`
 	Code       string         `json:"division_code" db:"division_code" validate:"required"`
 	Title      string         `json:"division_title" db:"division_title" validate:"required"`

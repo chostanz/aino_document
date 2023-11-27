@@ -23,6 +23,7 @@ type Role struct {
 }
 
 type Roles struct {
+	UUID       string         `json:"role_uuid" db:"role_uuid"`
 	Order      int            `json:"role_order" db:"role_order"`
 	Code       string         `json:"role_code" db:"role_code" validate:"required"`
 	Title      string         `json:"role_title" db:"role_title" validate:"required"`

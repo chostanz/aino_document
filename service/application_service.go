@@ -91,7 +91,7 @@ func AddApplication(addApplication models.Application, userUUID string) error {
 func GetAllApp() ([]models.Applications, error) {
 	application := []models.Applications{}
 
-	rows, err := db.Queryx("SELECT application_order, application_code, application_title, application_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at FROM application_ms")
+	rows, err := db.Queryx("SELECT application_uuid, application_order, application_code, application_title, application_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at FROM application_ms WHERE deleted_at IS NULL")
 	if err != nil {
 		return nil, err
 	}
@@ -103,11 +103,10 @@ func GetAllApp() ([]models.Applications, error) {
 	return application, nil
 }
 
-func ShowApplicationById(id int) (models.Applications, error) {
+func ShowApplicationById(id string) (models.Applications, error) {
 	var appid models.Applications
-	idStr := strconv.Itoa(id)
 
-	err := db.Get(&appid, "SELECT application_order, application_code, application_title, application_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at FROM application_ms WHERE application_order = $1", idStr)
+	err := db.Get(&appid, "SELECT application_uuid, application_order, application_code, application_title, application_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at FROM application_ms WHERE application_uuid = $1 AND deleted_at IS NULL", id)
 	if err != nil {
 		return models.Applications{}, err
 	}
@@ -127,8 +126,7 @@ func GetAppById(id int) (models.Application, error) {
 
 }
 
-func UpdateApp(updateApp models.Application, id int, userUUID string) (models.Application, error) {
-	idStr := strconv.Itoa(id)
+func UpdateApp(updateApp models.Application, id string, userUUID string) (models.Application, error) {
 	username, errUser := GetUsernameByID(userUUID)
 	if errUser != nil {
 		log.Print(errUser)
@@ -138,13 +136,13 @@ func UpdateApp(updateApp models.Application, id int, userUUID string) (models.Ap
 
 	currentTime := time.Now()
 
-	_, err := db.NamedExec("UPDATE application_ms SET application_code = :application_code, application_title = :application_title, application_description = :application_description, updated_by = :updated_by, updated_at = :updated_at WHERE application_order = :id", map[string]interface{}{
+	_, err := db.NamedExec("UPDATE application_ms SET application_code = :application_code, application_title = :application_title, application_description = :application_description, updated_by = :updated_by, updated_at = :updated_at WHERE application_uuid = :id", map[string]interface{}{
 		"application_code":        updateApp.Code,
 		"application_title":       updateApp.Title,
 		"application_description": updateApp.Description,
 		"updated_by":              username,
 		"updated_at":              currentTime,
-		"id":                      idStr,
+		"id":                      id,
 	})
 
 	if err != nil {
@@ -154,4 +152,31 @@ func UpdateApp(updateApp models.Application, id int, userUUID string) (models.Ap
 
 	return updateApp, nil
 
+}
+
+func DeleteApp(id string, userUUID string) error {
+	username, errU := GetUsernameByID(userUUID)
+	if errU != nil {
+		log.Print(errU)
+		return errU
+	}
+
+	currentTime := time.Now()
+
+	result, err := db.NamedExec("UPDATE application_ms SET deleted_by = :deleted_by, deleted_at = :deleted_at WHERE application_uuid = :id AND deleted_at IS NULL", map[string]interface{}{
+		"deleted_by": username,
+		"deleted_at": currentTime,
+		"id":         id,
+	})
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return ErrNotFound // Mengembalikan error jika tidak ada rekaman yang cocok
+	}
+
+	return nil
 }

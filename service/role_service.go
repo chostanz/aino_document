@@ -2,12 +2,14 @@ package service
 
 import (
 	"aino_document/models"
+	"errors"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var ErrNotFound = errors.New("role not found")
 
 func AddRole(addRole models.Role, userUUID string) error {
 	username, errP := GetUsernameByID(userUUID)
@@ -40,7 +42,7 @@ func AddRole(addRole models.Role, userUUID string) error {
 func GetAllRole() ([]models.Roles, error) {
 	allRole := []models.Roles{}
 
-	rows, err := db.Queryx("SELECT role_order, role_code, role_title, role_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at FROM role_ms")
+	rows, err := db.Queryx("SELECT role_uuid, role_order, role_code, role_title, role_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at FROM role_ms WHERE deleted_at IS NULL")
 	if err != nil {
 		return nil, err
 	}
@@ -58,22 +60,20 @@ func GetAllRole() ([]models.Roles, error) {
 	return allRole, nil
 }
 
-func ShowRoleById(id int) (models.Roles, error) {
-	var roleId models.Roles
-	idStr := strconv.Itoa(id)
+func ShowRoleById(id string) (models.Roles, error) {
+	var roleUUID models.Roles
 
-	err := db.Get(&roleId, "SELECT role_order, role_code, role_title, role_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at FROM role_ms WHERE role_order = $1", idStr)
+	err := db.Get(&roleUUID, "SELECT  role_uuid, role_order, role_code, role_title, role_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at FROM role_ms WHERE role_uuid = $1 AND deleted_at IS NULL", id)
 	if err != nil {
 		return models.Roles{}, err
 	}
-	return roleId, nil
+	return roleUUID, nil
 }
 
-func GetRoleById(id int) (models.Role, error) {
+func GetRoleById(id string) (models.Role, error) {
 	var roleId models.Role
-	idStr := strconv.Itoa(id)
 
-	err := db.Get(&roleId, "SELECT * FROM role_ms WHERE role_order = $1", idStr)
+	err := db.Get(&roleId, "SELECT * FROM role_ms WHERE role_order = $1", id)
 	if err != nil {
 		return models.Role{}, err
 	}
@@ -81,8 +81,7 @@ func GetRoleById(id int) (models.Role, error) {
 
 }
 
-func UpdateRole(updateRole models.Role, id int, userUUID string) (models.Role, error) {
-	idStr := strconv.Itoa(id)
+func UpdateRole(updateRole models.Role, id string, userUUID string) (models.Role, error) {
 	username, errUser := GetUsernameByID(userUUID)
 	if errUser != nil {
 		log.Print(errUser)
@@ -92,12 +91,12 @@ func UpdateRole(updateRole models.Role, id int, userUUID string) (models.Role, e
 
 	currentTime := time.Now()
 
-	_, err := db.NamedExec("UPDATE role_ms SET role_code = :role_code, role_title = :role_title, updated_by = :updated_by, updated_at = :updated_at WHERE role_order = :id", map[string]interface{}{
+	_, err := db.NamedExec("UPDATE role_ms SET role_code = :role_code, role_title = :role_title, updated_by = :updated_by, updated_at = :updated_at WHERE role_uuid = :id", map[string]interface{}{
 		"role_code":  updateRole.Code,
 		"role_title": updateRole.Title,
 		"updated_by": username,
 		"updated_at": currentTime,
-		"id":         idStr,
+		"id":         id,
 	})
 
 	if err != nil {
@@ -105,4 +104,30 @@ func UpdateRole(updateRole models.Role, id int, userUUID string) (models.Role, e
 		return models.Role{}, err
 	}
 	return updateRole, nil
+}
+
+func DeleteRole(id string, userUUID string) error {
+	username, errUser := GetUsernameByID(userUUID)
+	if errUser != nil {
+		log.Print(errUser)
+		return errUser
+	}
+
+	currentTime := time.Now()
+	result, err := db.NamedExec("UPDATE role_ms SET deleted_by = :deleted_by, deleted_at = :deleted_at WHERE role_uuid = :id AND deleted_at IS NULL", map[string]interface{}{
+		"deleted_by": username,
+		"deleted_at": currentTime,
+		"id":         id,
+	})
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return ErrNotFound // Mengembalikan error jika tidak ada rekaman yang cocok
+	}
+
+	return nil
 }

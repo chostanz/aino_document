@@ -51,8 +51,9 @@ type UpdateUser struct {
 	Deleted_by      sql.NullString `json:"deleted_by" db:"deleted_by"`
 	Deleted_at      sql.NullTime   `json:"deleted_at" db:"deleted_at"`
 	ApplicationRole struct {
-		Application_UUID string `json:"application_uuid" db:"application_uuid"`
-		Role_UUID        string `json:"role_uuid" db:"role_uuid"`
-		Division_UUID    string `json:"division_uuid" db:"division_uuid"`
+		Application_role_UUID string `json:"application_role_uuid" db:"application_role_uuid"`
+		Application_UUID      string `json:"application_uuid" db:"application_uuid"`
+		Role_UUID             string `json:"role_uuid" db:"role_uuid"`
+		Division_UUID         string `json:"division_uuid" db:"division_uuid"`
 	} `json:"applicationRole"`
 }

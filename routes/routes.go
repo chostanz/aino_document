@@ -18,7 +18,7 @@ func Route() *echo.Echo {
 
 	superAdminGroup := r.Group("/superadmin")
 	superAdminGroup.Use(middleware.AdminMiddleware)
-	// adminGroup.GET("/user/application/role", controller.GetUserAppRole)
+	superAdminGroup.GET("/user/application/role", controller.GetUserAppRole)
 	superAdminGroup.POST("/application/add", controller.AddApplication)
 	superAdminGroup.POST("/application/role/add", controller.AddAppRole)
 	superAdminGroup.POST("/division/add", controller.AddDivision)
@@ -28,6 +28,12 @@ func Route() *echo.Echo {
 	superAdminGroup.PUT("/role/update/:id", controller.UpdateRole)
 	superAdminGroup.PUT("/application/update/:id", controller.UpdateApp)
 	superAdminGroup.PUT("/application/role/update/:id", controller.UpdateAppRole)
+	superAdminGroup.PUT("/user/update/:id", controller.UpdateUser)
+
+	superAdminGroup.PUT("/role/delete/:id", controller.DeleteRole)
+	superAdminGroup.PUT("/division/delete/:id", controller.DeleteDivision)
+	superAdminGroup.PUT("/application/delete/:id", controller.DeleteApp)
+	superAdminGroup.PUT("/application/role/delete/:id", controller.DeleteAppRole)
 
 	r.GET("/user/application/role", controller.GetUserAppRole)
 	r.GET("/division/all", controller.GetAllDivision)

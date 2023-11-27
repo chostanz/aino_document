@@ -209,7 +209,7 @@ func Login(userLogin models.Login) (string, string, string, int, bool, error) {
 
 }
 
-func UpdateUserProfile(userUpdate models.UpdateUser, userUUID string) error {
+func UpdateUserProfile(userUpdate models.UpdateUser, id string, userUUID string) error {
 	// Dapatkan ID pengguna dari user_ms berdasarkan user_uuid
 	var userID int64
 	err := db.Get(&userID, "SELECT user_id FROM user_ms WHERE user_uuid = $1", userUUID)
@@ -221,7 +221,7 @@ func UpdateUserProfile(userUpdate models.UpdateUser, userUUID string) error {
 	// Update nama pengguna dan email di tabel user_ms
 	_, err = db.NamedExec("UPDATE user_ms SET user_name = :user_name, user_email = :user_email WHERE user_uuid = :user_uuid",
 		map[string]interface{}{
-			"user_uuid":  userID,
+			"user_uuid":  userUUID,
 			"user_name":  userUpdate.Username,
 			"user_email": userUpdate.Email,
 		})
@@ -231,7 +231,7 @@ func UpdateUserProfile(userUpdate models.UpdateUser, userUUID string) error {
 	}
 
 	// Dapatkan role_id, application_id, dan division_id yang sudah ada
-	var roleID, applicationID, divisionID int64
+	var roleID, applicationID, applicationUUID, divisionID int64
 	err = db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_uuid = $1", userUpdate.ApplicationRole.Role_UUID)
 	if err != nil {
 		log.Println("Error getting role_id:", err)
@@ -250,9 +250,15 @@ func UpdateUserProfile(userUpdate models.UpdateUser, userUUID string) error {
 		return err
 	}
 
+	err = db.Get(&applicationUUID, "SELECT application_role_uuid FROM application_ms WHERE application_role_uuid = $1", userUpdate.ApplicationRole.Application_role_UUID)
+	if err != nil {
+		log.Println("Error getting application_id:", err)
+		return err
+	}
+
 	// Update data di tabel application_role_ms
-	_, err = db.Exec("UPDATE application_role_ms SET application_id = $1, role_id = $2 WHERE user_id = $3",
-		applicationID, roleID, userID)
+	_, err = db.Exec("UPDATE application_role_ms SET application_id = $1, role_id = $2 WHERE application_uuid = $3",
+		applicationID, roleID, applicationUUID)
 	if err != nil {
 		log.Println("Error updating data in application_role_ms:", err)
 		return err

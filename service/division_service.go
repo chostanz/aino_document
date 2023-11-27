@@ -16,7 +16,7 @@ var db *sqlx.DB = database.Connection()
 func GetAllDivision() ([]models.Divisions, error) {
 	divisi := []models.Divisions{}
 
-	rows, errSelect := db.Queryx("select division_order, division_code, division_title, division_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at from division_ms")
+	rows, errSelect := db.Queryx("select division_uuid, division_order, division_code, division_title, division_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at from division_ms WHERE deleted_at IS NULL")
 	if errSelect != nil {
 		return nil, errSelect
 	}
@@ -30,11 +30,10 @@ func GetAllDivision() ([]models.Divisions, error) {
 	return divisi, nil
 }
 
-func ShowDivisionById(id int) (models.Divisions, error) {
+func ShowDivisionById(id string) (models.Divisions, error) {
 	var divisiId models.Divisions
-	idStr := strconv.Itoa(id)
 
-	err := db.Get(&divisiId, "SELECT division_order, division_code, division_title, division_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at from division_ms WHERE division_order = $1", idStr)
+	err := db.Get(&divisiId, "SELECT division_uuid, division_order, division_code, division_title, division_show, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at from division_ms WHERE division_uuid = $1 AND deleted_at IS NULL", id)
 	if err != nil {
 		return models.Divisions{}, err
 	}
@@ -80,8 +79,7 @@ func AddDivision(addDivision models.Division, userUUID string) error {
 	return nil
 }
 
-func UpdateDivision(updateDivision models.Division, id int, userUUID string) (models.Division, error) {
-	idStr := strconv.Itoa(id)
+func UpdateDivision(updateDivision models.Division, id string, userUUID string) (models.Division, error) {
 	username, errUser := GetUsernameByID(userUUID)
 	if errUser != nil {
 		log.Print(errUser)
@@ -91,16 +89,42 @@ func UpdateDivision(updateDivision models.Division, id int, userUUID string) (mo
 
 	currentTime := time.Now()
 
-	_, err := db.NamedExec("UPDATE division_ms SET division_code = :division_code, division_title = :division_title, updated_by = :updated_by, updated_at = :updated_at WHERE division_order = :id", map[string]interface{}{
+	_, err := db.NamedExec("UPDATE division_ms SET division_code = :division_code, division_title = :division_title, updated_by = :updated_by, updated_at = :updated_at WHERE division_uuid = :id", map[string]interface{}{
 		"division_code":  updateDivision.Code,
 		"division_title": updateDivision.Title,
 		"updated_by":     username,
 		"updated_at":     currentTime,
-		"id":             idStr,
+		"id":             id,
 	})
 	if err != nil {
 		log.Print(err)
 		return models.Division{}, err
 	}
 	return updateDivision, nil
+}
+
+func DeleteDivision(id string, userUUID string) error {
+	username, errUser := GetUsernameByID(userUUID)
+	if errUser != nil {
+		log.Print(errUser)
+		return errUser
+	}
+
+	currentTime := time.Now()
+	result, err := db.NamedExec("UPDATE division_ms SET deleted_by = :deleted_by, deleted_at = :deleted_at WHERE division_uuid = :id AND deleted_at IS NULL", map[string]interface{}{
+		"deleted_by": username,
+		"deleted_at": currentTime,
+		"id":         id,
+	})
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return ErrNotFound // Mengembalikan error jika tidak ada rekaman yang cocok
+	}
+
+	return nil
 }

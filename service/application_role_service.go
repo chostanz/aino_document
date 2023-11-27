@@ -48,9 +48,8 @@ func AddApplicationRole(addAppRole models.AddApplicationRole, userUUID string) e
 
 func GetAppRole(id string) (models.ApplicationRole, error) {
 	var appRoleId models.ApplicationRole
-	// idStr := strconv.Itoa(id)
 
-	err := db.Get(&appRoleId, "SELECT application_role_id, application_id, role_id, created_by, created_at, updated_by, updated_at, deleted_by, deleted_at from application_role_ms WHERE application_role_uuid = $1", id)
+	err := db.Get(&appRoleId, "SELECT ar.application_role_uuid, a.application_title, r.role_title, ar.application_id, ar.role_id, ar.created_by, ar.created_at, ar.updated_by, ar.updated_at, ar.deleted_by, ar.deleted_at FROM application_role_ms ar JOIN application_ms a ON ar.application_id = a.application_id JOIN role_ms r ON ar.role_id = r.role_id WHERE ar.application_role_uuid = $1 AND ar.deleted_at IS NULL", id)
 	if err != nil {
 		return models.ApplicationRole{}, err
 	}
@@ -95,4 +94,31 @@ func UpdateAppRole(updateAppRole models.AddApplicationRole, id string, userUUID 
 	}
 
 	return updateAppRole, nil
+}
+
+func DeleteAppRole(id string, userUUID string) error {
+	username, errU := GetUsernameByID(userUUID)
+	if errU != nil {
+		log.Print(errU)
+		return errU
+	}
+
+	currentTime := time.Now()
+
+	result, err := db.NamedExec("UPDATE application_role_ms SET deleted_by = :deleted_by, deleted_at = :deleted_at WHERE application_role_uuid = :id AND deleted_at IS NULL", map[string]interface{}{
+		"deleted_by": username,
+		"deleted_at": currentTime,
+		"id":         id,
+	})
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return ErrNotFound // Mengembalikan error jika tidak ada rekaman yang cocok
+	}
+
+	return nil
 }

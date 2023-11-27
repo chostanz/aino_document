@@ -31,7 +31,7 @@ func GetAllDivision(c echo.Context) error {
 }
 
 func ShowDivisionById(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id := c.Param("id")
 
 	var getDivision models.Divisions
 
@@ -40,11 +40,12 @@ func ShowDivisionById(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			response := models.Response{
 				Code:    404,
-				Message: "Divisi tidak ditemukan!",
+				Message: "Division tidak ditemukan!",
 				Status:  false,
 			}
 			return c.JSON(http.StatusNotFound, response)
 		} else {
+			log.Print(err)
 			return c.JSON(http.StatusInternalServerError, &models.Response{
 				Code:    500,
 				Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi!",
@@ -66,7 +67,7 @@ func GetDivisionById(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			response := models.Response{
 				Code:    404,
-				Message: "Divisi tidak ditemukan!",
+				Message: "Division tidak ditemukan!",
 				Status:  false,
 			}
 			return c.JSON(http.StatusNotFound, response)
@@ -158,7 +159,7 @@ func AddDivision(c echo.Context) error {
 			if dbErr.Code.Name() == "unique_violation" {
 				return c.JSON(http.StatusBadRequest, &models.Response{
 					Code:    400,
-					Message: "Gagal menambahkan divisi. Divisi sudah ada!",
+					Message: "Gagal menambahkan division. Division sudah ada!",
 					Status:  false,
 				})
 			}
@@ -171,7 +172,7 @@ func AddDivision(c echo.Context) error {
 	}
 	return c.JSON(http.StatusCreated, &models.Response{
 		Code:    201,
-		Message: "Berhasil menambahkan divisi!",
+		Message: "Berhasil menambahkan division!",
 		Status:  true,
 	})
 }
@@ -228,13 +229,13 @@ func UpdateDivision(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
 	}
 
-	id, _ := strconv.Atoi(c.Param("id"))
+	id := c.Param("id")
 
 	perviousContent, errGet := service.ShowDivisionById(id)
 	if errGet != nil {
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
-			Message: "Gagal mengambil data divisi saat ini. Mohon coba beberapa saat lagi!",
+			Message: "Gagal mengambil data division saat ini. Mohon coba beberapa saat lagi!",
 			Status:  false,
 		})
 	}
@@ -265,7 +266,7 @@ func UpdateDivision(c echo.Context) error {
 					log.Println(dbErr)
 					return c.JSON(http.StatusBadRequest, &models.Response{
 						Code:    400,
-						Message: "Data sudah ada",
+						Message: "Division sudah ada! Division tidak boleh sama!",
 						Status:  false,
 					})
 				}
@@ -282,7 +283,86 @@ func UpdateDivision(c echo.Context) error {
 		log.Println(perviousContent)
 		return c.JSON(http.StatusOK, &models.Response{
 			Code:    200,
-			Message: "Role telah diperbarui",
+			Message: "Division berhasil diperbarui!",
+			Status:  true,
+		})
+	} else {
+		log.Println("Kesalahan sebelum pembaruan:", err)
+		return c.JSON(http.StatusInternalServerError, &models.Response{
+			Code:    500,
+			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
+			Status:  false,
+		})
+	}
+}
+
+func DeleteDivision(c echo.Context) error {
+	tokenString := c.Request().Header.Get("Authorization")
+	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+
+	// Periksa apakah tokenString tidak kosong
+	if tokenString == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak ditemukan!",
+			"status":  false,
+		})
+	}
+
+	// Periksa apakah tokenString mengandung "Bearer "
+	if !strings.HasPrefix(tokenString, "Bearer ") {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+
+	// Hapus "Bearer " dari tokenString
+	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
+
+	// Langkah 1: Mendekripsi token JWE
+	decrypted, err := DecryptJWE(tokenOnly, secretKey)
+	if err != nil {
+		fmt.Println("Gagal mendekripsi token:", err)
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+
+	var claims JwtCustomClaims
+	errJ := json.Unmarshal([]byte(decrypted), &claims)
+	if errJ != nil {
+		fmt.Println("Gagal mengurai klaim:", errJ)
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+	userUUID := c.Get("user_uuid").(string)
+	_, errK := service.GetUserInfoFromToken(tokenOnly)
+	if errK != nil {
+		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
+	}
+
+	id := c.Param("id")
+
+	if err == nil {
+		errService := service.DeleteDivision(id, userUUID)
+		if errService == service.ErrNotFound {
+			return c.JSON(http.StatusNotFound, &models.Response{
+				Code:    404,
+				Message: "Gagal menghapus division. Division tidak ditemukan!",
+				Status:  false,
+			})
+		}
+
+		return c.JSON(http.StatusOK, &models.Response{
+			Code:    200,
+			Message: "Division berhasil dihapus!",
 			Status:  true,
 		})
 	} else {
