@@ -16,6 +16,31 @@ func AddRole(addRole models.Role, userUUID string) error {
 	if errP != nil {
 		return errP
 	}
+
+	var existingRoleID int
+	err := db.QueryRow("SELECT role_id FROM role_ms WHERE (role_title = $1 OR role_code = $2) AND deleted_at IS NOT NULL", addRole.Title, addRole.Code).Scan(&existingRoleID)
+
+	// Jika data ditemukan
+	if err == nil {
+		// Duplikat ditemukan dan sudah dihapus lembut, kembalikan data yang dihapus lembut berdasarkan division_id
+		err = RestoreSoftDeletedRole(existingRoleID, userUUID, addRole)
+		if err != nil {
+			log.Printf("error restore : %s", err)
+			return err
+		}
+	}
+	// Pengecekan duplikat berdasarkan role_title
+	// var existingRoleTitle string
+	// err := db.QueryRow("SELECT role_title FROM role_ms WHERE role_title = $1 AND deleted_at IS NOT NULL", addRole.Title).Scan(&existingRoleTitle)
+	// if err == nil {
+	// 	// Duplikat ditemukan dan sudah dihapus lembut, kembalikan data yang dihapus lembut
+	// 	err = RestoreSoftDeletedRole(addRole.Title, userUUID)
+	// 	if err != nil {
+	// 		log.Print(err)
+	// 		return err
+	// 	}
+	// }
+
 	currentTimestamp := time.Now().UnixNano() / int64(time.Microsecond)
 	uniqueID := uuid.New().ID()
 
@@ -24,7 +49,7 @@ func AddRole(addRole models.Role, userUUID string) error {
 	uuid := uuid.New()
 	uuidString := uuid.String()
 
-	_, err := db.NamedExec("INSERT INTO role_ms(role_id, role_uuid, role_code, role_title, created_by)VALUES(:role_id, :role_uuid, :role_code, :role_title, :created_by)", map[string]interface{}{
+	_, err = db.NamedExec("INSERT INTO role_ms(role_id, role_uuid, role_code, role_title, created_by)VALUES(:role_id, :role_uuid, :role_code, :role_title, :created_by)", map[string]interface{}{
 		"role_id":    roleid,
 		"role_uuid":  uuidString,
 		"role_code":  addRole.Code,
@@ -104,6 +129,20 @@ func UpdateRole(updateRole models.Role, id string, userUUID string) (models.Role
 		return models.Role{}, err
 	}
 	return updateRole, nil
+}
+
+func RestoreSoftDeletedRole(roleID int, userUUID string, addRole models.Role) error {
+	username, _ := GetUsernameByID(userUUID)
+	// Cari role yang dihapus lembut dengan role_title tertentu
+	log.Printf("Restoring role with ID: %d", roleID)
+	// Lakukan UPDATE untuk mengembalikan division yang dihapus lembut
+	_, err := db.Exec("UPDATE role_ms SET created_at = NOW(), created_by = $2, updated_at = NULL, updated_by = '',  deleted_at = NULL, deleted_by = '', role_code = $3, role_title = $4 WHERE role_id = $1", roleID, username, addRole.Code, addRole.Title)
+	if err != nil {
+		log.Printf("Error during role restore: %s", err)
+		return err
+	}
+
+	return nil
 }
 
 func DeleteRole(id string, userUUID string) error {

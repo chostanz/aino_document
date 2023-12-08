@@ -201,18 +201,6 @@ func Login(c echo.Context) error {
 		},
 	}
 
-	// token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// secretKey := []byte("secretKeyJWT")
-	// t, err := token.SignedString(secretKey)
-	// fmt.Println("token:", t)
-	// if err != nil {
-	// 	return c.JSON(http.StatusInternalServerError, &models.ResponseLogin{
-	// 		Code:    500,
-	// 		Message: "Gagal membuat token. Mohon coba beberapa saat lagi!",
-	// 		Status:  false,
-	// 	})
-	// }
-
 	// Mengonversi claims ke format JSON
 	claimData, err := json.Marshal(claims)
 	if err != nil {
@@ -220,22 +208,13 @@ func Login(c echo.Context) error {
 	}
 
 	// Buat token JWT dengan enkripsi JWE
-	secretKey := "secretJwToken" // Ganti dengan kunci
+	secretKey := "secretJwToken"
 	jweToken, err := jose.Encrypt(string(claimData), jose.PBES2_HS256_A128KW, jose.A128GCM, secretKey)
 	if err != nil {
 		fmt.Println("Gagal membuat token:", err)
 	}
 
 	fmt.Println("Token JWE:", jweToken)
-
-	// Decode token JWE
-	// decodedToken, _, err := jose.Decode(jweToken, secretKey)
-	// if err != nil {
-	// 	fmt.Println("Gagal mendekripsi token:", err)
-	// }
-
-	// // Tampilkan token yang telah dideskripsi
-	// fmt.Println("Token yang telah dideskripsi:", decodedToken)
 	return c.JSON(http.StatusOK, &models.ResponseLogin{
 		Code:    200,
 		Message: "Berhasil login",
@@ -371,4 +350,126 @@ func UpdateUser(c echo.Context) error {
 		"message": "Profil pengguna telah diperbarui!",
 		"status":  true,
 	})
+}
+
+func ChangePassword(c echo.Context) error {
+	tokenString := c.Request().Header.Get("Authorization")
+	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+
+	// Periksa apakah tokenString tidak kosong
+	if tokenString == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak ditemukan!",
+			"status":  false,
+		})
+	}
+
+	// Periksa apakah tokenString mengandung "Bearer "
+	if !strings.HasPrefix(tokenString, "Bearer ") {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+
+	// Hapus "Bearer " dari tokenString
+	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
+
+	// Langkah 1: Mendekripsi token JWE
+	decrypted, errDec := DecryptJWE(tokenOnly, secretKey)
+	if errDec != nil {
+		fmt.Println("Gagal mendekripsi token:", errDec)
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+
+	var claims JwtCustomClaims
+	errJ := json.Unmarshal([]byte(decrypted), &claims)
+	if errJ != nil {
+		fmt.Println("Gagal mengurai klaim:", errJ)
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Token tidak valid!",
+			"status":  false,
+		})
+	}
+	userUUIDRaw := c.Get("user_uuid")
+	if userUUIDRaw == nil {
+		// Handle jika nilai "user_uuid" nil
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "User UUID not found!",
+			"status":  false,
+		})
+	}
+
+	userUUID, ok := userUUIDRaw.(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+			"code":    401,
+			"message": "Invalid User UUID format!",
+			"status":  false,
+		})
+	}
+
+	_, errK := service.GetUserInfoFromToken(tokenOnly)
+	if errK != nil {
+		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
+	}
+
+	var passUpdate models.ChangePasswordRequest
+	if err := c.Bind(&passUpdate); err != nil {
+		return c.JSON(http.StatusBadRequest, &models.Response{
+			Code:    400,
+			Message: "Invalid request data",
+			Status:  false,
+		})
+	}
+
+	if err := c.Validate(&passUpdate); err != nil {
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Invalid data! Password tidak boleh kosong!",
+			Status:  false,
+		})
+	}
+
+	errS := service.ChangePassword(passUpdate, userUUID)
+	if errS != nil {
+
+		if validationErr, ok := errS.(*service.ValidationError); ok {
+			if validationErr.Tag == "strong_password" {
+				return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+					Code:    422,
+					Message: "Password harus memiliki setidaknya 8 karakter",
+					Status:  false,
+				})
+			}
+		}
+
+		if passUpdate.OldPassword == passUpdate.NewPassword {
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Password baru tidak boleh sama dengan password lama!",
+				Status:  false,
+			})
+		}
+		return c.JSON(http.StatusUnauthorized, &models.Response{
+			Code:    401,
+			Message: "Password lama salah!",
+			Status:  false,
+		})
+	}
+
+	return c.JSON(http.StatusOK, &models.Response{
+		Code:    200,
+		Message: "Password berhasil diubah!",
+		Status:  true,
+	})
+
 }

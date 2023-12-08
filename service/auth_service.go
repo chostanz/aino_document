@@ -3,6 +3,7 @@ package service
 import (
 	"aino_document/models"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -67,13 +68,13 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 
 	// Mendapatkan role_id yang baru saja diinsert
 	var roleID int64
-	err = db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_uuid = $1", userRegister.ApplicationRole.Role_UUID)
+	err = db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_uuid = $1 AND deleted_at IS NULL", userRegister.ApplicationRole.Role_UUID)
 	if err != nil {
 		log.Println("Error getting role_id:", err)
 		return err
 	}
 	var applicationID int64
-	err = db.Get(&applicationID, "SELECT application_id FROM application_ms WHERE application_uuid = $1", userRegister.ApplicationRole.Application_UUID)
+	err = db.Get(&applicationID, "SELECT application_id FROM application_ms WHERE application_uuid = $1 AND deleted_at IS NULL", userRegister.ApplicationRole.Application_UUID)
 	if err != nil {
 		log.Println("Error getting application_id:", err)
 		return err
@@ -81,7 +82,7 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 
 	// Get division_id
 	var divisionID int64
-	err = db.Get(&divisionID, "SELECT division_id FROM division_ms WHERE division_uuid = $1", userRegister.ApplicationRole.Division_UUID)
+	err = db.Get(&divisionID, "SELECT division_id FROM division_ms WHERE division_uuid = $1 AND deleted_at IS NULL", userRegister.ApplicationRole.Division_UUID)
 	if err != nil {
 		log.Println("Error fetching division_id:", err)
 		return err
@@ -108,7 +109,7 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	log.Println("Application Role ID:", applicationRoleID)
 
 	// Insert user_application_role_ms data
-	_, err = db.Exec("INSERT INTO user_application_role_ms(user_application_role_uuid, user_id, application_role_id, division_id) VALUES ($1, $2, $3, $4)", uuidString, user_id, applicationRoleID, divisionID)
+	_, err = db.Exec("INSERT INTO user_application_role_ms(user_application_role_uuid, user_id, application_role_id, division_id, created_by) VALUES ($1, $2, $3, $4, $5)", uuidString, user_id, applicationRoleID, divisionID, username)
 	if err != nil {
 		log.Println("Error inserting data into user_application_role_ms:", err)
 		return err
@@ -272,5 +273,53 @@ func UpdateUserProfile(userUpdate models.UpdateUser, id string, userUUID string)
 		return err
 	}
 
+	return nil
+}
+
+func ChangePassword(changePassword models.ChangePasswordRequest, userUUID string) error {
+	var dbPassword string
+	err := db.Get(&dbPassword, "SELECT user_password FROM user_ms WHERE user_uuid = $1", userUUID)
+	if err != nil {
+		return err
+	}
+
+	decodedPassword, err := base64.StdEncoding.DecodeString(dbPassword)
+	if err != nil {
+		return err
+	}
+
+	if len(changePassword.NewPassword) < 8 {
+		return &ValidationError{
+			Message: "Password should be of 8 characters long",
+			Field:   "password",
+			Tag:     "strong_password",
+		}
+	}
+	errBycript := bcrypt.CompareHashAndPassword(decodedPassword, []byte(changePassword.OldPassword))
+	if errBycript != nil {
+		fmt.Println("Error comparing old passwords:", errBycript)
+		return errBycript
+	}
+
+	if changePassword.OldPassword == changePassword.NewPassword {
+		return errors.New("new password must be different from old password")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(changePassword.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		fmt.Println("Error generating hashed password:", err)
+		return err
+	}
+
+	hashedPasswordStr := base64.StdEncoding.EncodeToString(hashedPassword)
+	_, err = db.NamedExec("UPDATE user_ms SET user_password = :user_password WHERE user_uuid = :user_uuid", map[string]interface{}{
+		"user_password": hashedPasswordStr,
+		"user_uuid":     userUUID,
+	})
+
+	if err != nil {
+		fmt.Println("Error updating password in database:", err)
+		return err
+	}
 	return nil
 }

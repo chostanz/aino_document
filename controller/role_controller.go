@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"aino_document/database"
 	"aino_document/models"
 	"aino_document/service"
 	"database/sql"
@@ -10,9 +11,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/lib/pq"
 )
+
+var db *sqlx.DB = database.Connection()
 
 func AddRole(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
@@ -83,11 +87,18 @@ func AddRole(c echo.Context) error {
 		if addroleErr != nil {
 			if dbErr, ok := addroleErr.(*pq.Error); ok {
 				if dbErr.Code.Name() == "unique_violation" {
-					return c.JSON(http.StatusBadRequest, &models.Response{
-						Code:    400,
-						Message: "Gagal menambahkan role. Role sudah ada!",
-						Status:  false,
-					})
+					// Pengecekan tambahan: hanya tampilkan pesan jika `deleted_at` adalah NULL
+					var existingRoleTitle string
+					//sstime.Sleep(100 * time.Millisecond)
+					query := "SELECT role_title FROM role_ms WHERE role_title = $1 AND deleted_at IS NULL"
+					errQuery := db.QueryRow(query, addRole.Title).Scan(&existingRoleTitle)
+					if errQuery == nil {
+						return c.JSON(http.StatusBadRequest, &models.Response{
+							Code:    400,
+							Message: "Gagal menambahkan role. Role sudah ada!",
+							Status:  false,
+						})
+					}
 				}
 			}
 			return c.JSON(http.StatusInternalServerError, "Error")

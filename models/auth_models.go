@@ -57,3 +57,8 @@ type UpdateUser struct {
 		Division_UUID         string `json:"division_uuid" db:"division_uuid"`
 	} `json:"applicationRole"`
 }
+
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required"`
+}

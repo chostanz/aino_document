@@ -46,6 +46,27 @@ func AddApplicationRole(addAppRole models.AddApplicationRole, userUUID string) e
 	return nil
 }
 
+func GetAllAppRole() ([]models.ApplicationRole, error) {
+	applicationRole := []models.ApplicationRole{}
+
+	rows, err := db.Queryx("SELECT ar.application_role_uuid, a.application_title, r.role_title, ar.application_id, ar.role_id, ar.created_by, ar.created_at, ar.updated_by, ar.updated_at, ar.deleted_by, ar.deleted_at FROM application_role_ms ar JOIN application_ms a ON ar.application_id = a.application_id JOIN role_ms r ON ar.role_id = r.role_id WHERE ar.deleted_at IS NULL")
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		place := models.ApplicationRole{}
+		//rows.StructScan(&place)
+
+		if err := rows.StructScan(&place); err != nil {
+			log.Print(err)
+			// Handle error, bisa dengan menghentikan loop atau memberikan penanganan sesuai kebutuhan
+			continue
+		}
+		applicationRole = append(applicationRole, place)
+	}
+	return applicationRole, nil
+}
+
 func GetAppRole(id string) (models.ApplicationRole, error) {
 	var appRoleId models.ApplicationRole
 

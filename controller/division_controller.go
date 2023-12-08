@@ -38,6 +38,7 @@ func ShowDivisionById(c echo.Context) error {
 	getDivision, err := service.ShowDivisionById(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			log.Print(err)
 			response := models.Response{
 				Code:    404,
 				Message: "Division tidak ditemukan!",
@@ -152,24 +153,39 @@ func AddDivision(c echo.Context) error {
 			Status:  false,
 		})
 	}
-
 	if err = service.AddDivision(addDivision, userUUID); err != nil {
 		log.Print(err)
+
 		if dbErr, ok := err.(*pq.Error); ok {
 			if dbErr.Code.Name() == "unique_violation" {
-				return c.JSON(http.StatusBadRequest, &models.Response{
-					Code:    400,
-					Message: "Gagal menambahkan division. Division sudah ada!",
-					Status:  false,
-				})
+				// Mengecek apakah konflik unik terjadi pada kolom yang diindeks dan mengandung deleted_at yang tidak null
+				if strings.Contains(dbErr.Detail, "division_title") || strings.Contains(dbErr.Detail, "division_code") {
+					if strings.Contains(dbErr.Detail, "deleted_at IS NOT NULL") {
+						// Konflik unik terjadi pada data yang telah dihapus lembut
+						return c.JSON(http.StatusCreated, &models.Response{
+							Code:    201,
+							Message: "Sukses menambahkan division. Division sudah ada dan telah dihapus lembut!",
+							Status:  false,
+						})
+					} else {
+						// Konflik unik terjadi pada data yang masih aktif
+						return c.JSON(http.StatusBadRequest, &models.Response{
+							Code:    400,
+							Message: "Gagal menambahkan division. Division sudah ada!",
+							Status:  false,
+						})
+					}
+				}
 			}
 		}
+
 		return c.JSON(http.StatusInternalServerError, &models.Response{
 			Code:    500,
 			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
 			Status:  false,
 		})
 	}
+
 	return c.JSON(http.StatusCreated, &models.Response{
 		Code:    201,
 		Message: "Berhasil menambahkan division!",
@@ -263,7 +279,7 @@ func UpdateDivision(c echo.Context) error {
 			if dbErr, ok := errService.(*pq.Error); ok {
 				// Check for duplicate key violation (unique constraint violation)
 				if dbErr.Code.Name() == "unique_violation" {
-					log.Println(dbErr)
+					log.Printf("error duplikat: %s", dbErr)
 					return c.JSON(http.StatusBadRequest, &models.Response{
 						Code:    400,
 						Message: "Division sudah ada! Division tidak boleh sama!",

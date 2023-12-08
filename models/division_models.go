@@ -3,13 +3,11 @@ package models
 import (
 	"database/sql"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type Division struct {
 	Id         int            `json:"division_id" db:"division_id"`
-	UUID       uuid.UUID      `json:"division_uuid" db:"division_uuid"`
+	UUID       string         `json:"division_uuid" db:"division_uuid"`
 	Code       string         `json:"division_code" db:"division_code" validate:"required"`
 	Title      string         `json:"division_title" db:"division_title" validate:"required"`
 	Order      int            `json:"division_order" db:"division_order"`

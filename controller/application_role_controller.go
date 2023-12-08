@@ -100,6 +100,21 @@ func AddAppRole(c echo.Context) error {
 	})
 }
 
+func GetAllAppRole(c echo.Context) error {
+	app, err := service.GetAllAppRole()
+	if err != nil {
+		log.Print(err)
+		response := models.Response{
+			Code:    500,
+			Message: "Terjadi kesalahan internal server. Mohon coba beberapa saat lagi",
+			Status:  false,
+		}
+		return c.JSON(http.StatusInternalServerError, response)
+	}
+	return c.JSON(http.StatusOK, app)
+
+}
+
 func GetAppRole(c echo.Context) error {
 	var id = c.Param("id")
 	var getApp models.ApplicationRole
