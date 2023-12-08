@@ -89,36 +89,40 @@ func AddApplication(c echo.Context) error {
 	}
 
 	errVal := c.Validate(&addApplication)
-	if errVal != nil {
+
+	if errVal == nil {
+		var existingAppID int
+		err := db.QueryRow("SELECT application_id FROM application_ms WHERE (application_title = $1 OR application_code = $2) AND deleted_at IS NULL", addApplication.Title, addApplication.Code).Scan(&existingAppID)
+
+		if err == nil {
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Gagal menambahkan application. Application sudah ada!",
+				Status:  false,
+			})
+		} else {
+			addroleErr := service.AddApplication(addApplication, userUUID)
+			if addroleErr != nil {
+				return c.JSON(http.StatusInternalServerError, &models.Response{
+					Code:    500,
+					Message: "Terjadi kesalahan internal pada server.",
+					Status:  false,
+				})
+			}
+
+			return c.JSON(http.StatusCreated, &models.Response{
+				Code:    201,
+				Message: "Berhasil menambahkan application!",
+				Status:  true,
+			})
+		}
+	} else {
 		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
 			Code:    422,
 			Message: "Data tidak boleh kosong!",
 			Status:  false,
 		})
 	}
-
-	if err := service.AddApplication(addApplication, userUUID); err != nil {
-		log.Print(err)
-		if dbErr, ok := err.(*pq.Error); ok {
-			if dbErr.Code.Name() == "unique_violation" {
-				return c.JSON(http.StatusBadRequest, &models.Response{
-					Code:    400,
-					Message: "Gagal menambahkan application. Application sudah ada!",
-					Status:  false,
-				})
-			}
-		}
-		return c.JSON(http.StatusInternalServerError, &models.Response{
-			Code:    500,
-			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
-			Status:  false,
-		})
-	}
-	return c.JSON(http.StatusCreated, &models.Response{
-		Code:    201,
-		Message: "Berhasil menambahkan application!",
-		Status:  true,
-	})
 }
 
 func GetAllApp(c echo.Context) error {

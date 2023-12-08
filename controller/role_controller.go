@@ -20,9 +20,8 @@ var db *sqlx.DB = database.Connection()
 
 func AddRole(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
-	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+	secretKey := "secretJwToken"
 
-	// Periksa apakah tokenString tidak kosong
 	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -43,7 +42,7 @@ func AddRole(c echo.Context) error {
 	// Hapus "Bearer " dari tokenString
 	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
 
-	// Langkah 1: Mendekripsi token JWE
+	//dekripsi token JWE
 	decrypted, err := DecryptJWE(tokenOnly, secretKey)
 	if err != nil {
 		fmt.Println("Gagal mendekripsi token:", err)
@@ -83,31 +82,31 @@ func AddRole(c echo.Context) error {
 	errVal := c.Validate(&addRole)
 
 	if errVal == nil {
-		addroleErr := service.AddRole(addRole, userUUID)
-		if addroleErr != nil {
-			if dbErr, ok := addroleErr.(*pq.Error); ok {
-				if dbErr.Code.Name() == "unique_violation" {
-					// Pengecekan tambahan: hanya tampilkan pesan jika `deleted_at` adalah NULL
-					var existingRoleTitle string
-					//sstime.Sleep(100 * time.Millisecond)
-					query := "SELECT role_title FROM role_ms WHERE role_title = $1 AND deleted_at IS NULL"
-					errQuery := db.QueryRow(query, addRole.Title).Scan(&existingRoleTitle)
-					if errQuery == nil {
-						return c.JSON(http.StatusBadRequest, &models.Response{
-							Code:    400,
-							Message: "Gagal menambahkan role. Role sudah ada!",
-							Status:  false,
-						})
-					}
-				}
+		var existingRoleID int
+		err := db.QueryRow("SELECT role_id FROM role_ms WHERE (role_title = $1 OR role_code = $2) AND deleted_at IS NULL", addRole.Title, addRole.Code).Scan(&existingRoleID)
+
+		if err == nil {
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Gagal menambahkan role. Role sudah ada!",
+				Status:  false,
+			})
+		} else {
+			addroleErr := service.AddRole(addRole, userUUID)
+			if addroleErr != nil {
+				return c.JSON(http.StatusInternalServerError, &models.Response{
+					Code:    500,
+					Message: "Terjadi kesalahan internal pada server.",
+					Status:  false,
+				})
 			}
-			return c.JSON(http.StatusInternalServerError, "Error")
+
+			return c.JSON(http.StatusCreated, &models.Response{
+				Code:    201,
+				Message: "Berhasil menambahkan role!",
+				Status:  true,
+			})
 		}
-		return c.JSON(http.StatusCreated, &models.Response{
-			Code:    201,
-			Message: "Berhasil menambahkan role!",
-			Status:  true,
-		})
 	} else {
 		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
 			Code:    422,
@@ -187,9 +186,8 @@ func GetRoleById(c echo.Context) error {
 
 func UpdateRole(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
-	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+	secretKey := "secretJwToken"
 
-	// Periksa apakah tokenString tidak kosong
 	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -210,7 +208,7 @@ func UpdateRole(c echo.Context) error {
 	// Hapus "Bearer " dari tokenString
 	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
 
-	// Langkah 1: Mendekripsi token JWE
+	// dekripsi token JWE
 	decrypted, err := DecryptJWE(tokenOnly, secretKey)
 	if err != nil {
 		fmt.Println("Gagal mendekripsi token:", err)
@@ -306,9 +304,8 @@ func UpdateRole(c echo.Context) error {
 
 func DeleteRole(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
-	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+	secretKey := "secretJwToken"
 
-	// Periksa apakah tokenString tidak kosong
 	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -329,7 +326,7 @@ func DeleteRole(c echo.Context) error {
 	// Hapus "Bearer " dari tokenString
 	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
 
-	// Langkah 1: Mendekripsi token JWE
+	//dekripsi token JWE
 	decrypted, err := DecryptJWE(tokenOnly, secretKey)
 	if err != nil {
 		fmt.Println("Gagal mendekripsi token:", err)

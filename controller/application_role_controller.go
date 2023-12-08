@@ -16,9 +16,8 @@ import (
 
 func AddAppRole(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
-	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+	secretKey := "secretJwToken"
 
-	// Periksa apakah tokenString tidak kosong
 	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -39,7 +38,7 @@ func AddAppRole(c echo.Context) error {
 	// Hapus "Bearer " dari tokenString
 	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
 
-	// Langkah 1: Mendekripsi token JWE
+	//dekripsi token JWE
 	decrypted, err := DecryptJWE(tokenOnly, secretKey)
 	if err != nil {
 		fmt.Println("Gagal mendekripsi token:", err)

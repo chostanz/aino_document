@@ -18,28 +18,12 @@ func AddRole(addRole models.Role, userUUID string) error {
 	}
 
 	var existingRoleID int
-	err := db.QueryRow("SELECT role_id FROM role_ms WHERE (role_title = $1 OR role_code = $2) AND deleted_at IS NOT NULL", addRole.Title, addRole.Code).Scan(&existingRoleID)
+	err := db.QueryRow("SELECT role_id FROM role_ms WHERE (role_title = $1 OR role_code = $2) AND deleted_at IS NULL", addRole.Title, addRole.Code).Scan(&existingRoleID)
 
-	// Jika data ditemukan
 	if err == nil {
-		// Duplikat ditemukan dan sudah dihapus lembut, kembalikan data yang dihapus lembut berdasarkan division_id
-		err = RestoreSoftDeletedRole(existingRoleID, userUUID, addRole)
-		if err != nil {
-			log.Printf("error restore : %s", err)
-			return err
-		}
+		// Duplikat ditemukan, kembalikan kesalahan
+		log.Print("Role dengan judul atau kode yang sama sudah ada")
 	}
-	// Pengecekan duplikat berdasarkan role_title
-	// var existingRoleTitle string
-	// err := db.QueryRow("SELECT role_title FROM role_ms WHERE role_title = $1 AND deleted_at IS NOT NULL", addRole.Title).Scan(&existingRoleTitle)
-	// if err == nil {
-	// 	// Duplikat ditemukan dan sudah dihapus lembut, kembalikan data yang dihapus lembut
-	// 	err = RestoreSoftDeletedRole(addRole.Title, userUUID)
-	// 	if err != nil {
-	// 		log.Print(err)
-	// 		return err
-	// 	}
-	// }
 
 	currentTimestamp := time.Now().UnixNano() / int64(time.Microsecond)
 	uniqueID := uuid.New().ID()

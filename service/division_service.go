@@ -59,18 +59,13 @@ func AddDivision(addDivision models.Division, userUUID string) error {
 	if errP != nil {
 		return errP
 	}
-	var existingDivisionID int
-	err := db.QueryRow("SELECT division_id FROM division_ms WHERE (division_title = $1 OR division_code = $2) AND deleted_at IS NOT NULL", addDivision.Title, addDivision.Code).Scan(&existingDivisionID)
+	// var existingDivisionID int
+	// err := db.QueryRow("SELECT division_id FROM division_ms WHERE (division_title = $1 OR division_code = $2) AND deleted_at IS NOT NULL", addDivision.Title, addDivision.Code).Scan(&existingDivisionID)
 
-	// Jika data ditemukan
-	if err == nil {
-		// Duplikat ditemukan dan sudah dihapus lembut, kembalikan data yang dihapus lembut berdasarkan division_id
-		err = RestoreSoftDeletedDivision(existingDivisionID, userUUID, addDivision)
-		if err != nil {
-			log.Printf("error restore : %s", err)
-			return err
-		}
-	}
+	// if err == nil {
+	// 	// Duplikat ditemukan, kembalikan kesalahan
+	// 	log.Print("Role dengan judul atau kode yang sama sudah ada")
+	// }
 
 	currentTimestamp := time.Now().UnixNano() / int64(time.Microsecond)
 	uniqueID := uuid.New().ID()
@@ -79,7 +74,7 @@ func AddDivision(addDivision models.Division, userUUID string) error {
 
 	uuid := uuid.New()
 	uuidString := uuid.String()
-	_, err = db.NamedExec("INSERT INTO division_ms (division_id, division_uuid, division_code, division_title, created_by) VALUES (:division_id, :division_uuid, :division_code, :division_title, :created_by)", map[string]interface{}{
+	_, err := db.NamedExec("INSERT INTO division_ms (division_id, division_uuid, division_code, division_title, created_by) VALUES (:division_id, :division_uuid, :division_code, :division_title, :created_by)", map[string]interface{}{
 		"division_id":    divisionid,
 		"division_uuid":  uuidString,
 		"division_code":  addDivision.Code,

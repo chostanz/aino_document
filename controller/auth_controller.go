@@ -16,7 +16,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
-	"github.com/lib/pq"
 
 	_ "github.com/dgrijalva/jwt-go"
 )
@@ -115,29 +114,26 @@ func RegisterUser(c echo.Context) error {
 	err := c.Validate(&userRegister)
 
 	if err == nil {
-		registerErr := service.RegisterUser(userRegister, userUUID)
-		if registerErr != nil {
-			if validationErr, ok := registerErr.(*service.ValidationError); ok {
-				if validationErr.Tag == "strong_password" {
-					return c.JSON(http.StatusUnprocessableEntity, &models.Response{
-						Code:    422,
-						Message: "Password harus memiliki setidaknya 8 karakter",
-						Status:  false,
-					})
-				}
-			} else if dbErr, ok := registerErr.(*pq.Error); ok {
-				// Check for duplicate key violation (unique constraint violation)
-				if dbErr.Code.Name() == "unique_violation" {
-					log.Println(dbErr)
-					return c.JSON(http.StatusBadRequest, &models.Response{
-						Code:    400,
-						Message: "Username atau email telah digunakan!",
-						Status:  false,
-					})
-				}
-			}
+		var existingUserID int
+		err := db.QueryRow("SELECT user_id FROM user_ms WHERE (user_name = $1 OR user_email = $2) AND deleted_at IS NULL", userRegister.Username, userRegister.Email).Scan(&existingUserID)
+
+		if err == nil {
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Username atau email telah digunakan!",
+				Status:  false,
+			})
 		}
-		// log.Print(registerErr)
+
+		addroleErr := service.RegisterUser(userRegister, userUUID)
+		if addroleErr != nil {
+			return c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Terjadi kesalahan internal pada server.",
+				Status:  false,
+			})
+		}
+
 		return c.JSON(http.StatusCreated, &models.Response{
 			Code:    201,
 			Message: "Berhasil membuat akun!",
@@ -151,6 +147,7 @@ func RegisterUser(c echo.Context) error {
 			Status:  false,
 		})
 	}
+
 }
 
 func Login(c echo.Context) error {

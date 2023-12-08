@@ -86,9 +86,8 @@ func GetDivisionById(c echo.Context) error {
 
 func AddDivision(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
-	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+	secretKey := "secretJwToken"
 
-	// Periksa apakah tokenString tidak kosong
 	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -109,7 +108,7 @@ func AddDivision(c echo.Context) error {
 	// Hapus "Bearer " dari tokenString
 	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
 
-	// Langkah 1: Mendekripsi token JWE
+	//dekripsi token JWE
 	decrypted, err := DecryptJWE(tokenOnly, secretKey)
 	if err != nil {
 		fmt.Println("Gagal mendekripsi token:", err)
@@ -145,52 +144,42 @@ func AddDivision(c echo.Context) error {
 		})
 	}
 
-	errH := c.Validate(&addDivision)
-	if errH != nil {
+	errVal := c.Validate(&addDivision)
+
+	if errVal == nil {
+		var existingDivisionID int
+		err := db.QueryRow("SELECT division_id FROM division_ms WHERE (division_title = $1 OR division_code = $2) AND deleted_at IS NULL", addDivision.Title, addDivision.Code).Scan(&existingDivisionID)
+
+		if err == nil {
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Gagal menambahkan division. Division sudah ada!",
+				Status:  false,
+			})
+		} else {
+			addroleErr := service.AddDivision(addDivision, userUUID)
+			if addroleErr != nil {
+				return c.JSON(http.StatusInternalServerError, &models.Response{
+					Code:    500,
+					Message: "Terjadi kesalahan internal pada server.",
+					Status:  false,
+				})
+			}
+
+			return c.JSON(http.StatusCreated, &models.Response{
+				Code:    201,
+				Message: "Berhasil menambahkan division!",
+				Status:  true,
+			})
+		}
+	} else {
 		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
 			Code:    422,
 			Message: "Data tidak boleh kosong!",
 			Status:  false,
 		})
 	}
-	if err = service.AddDivision(addDivision, userUUID); err != nil {
-		log.Print(err)
 
-		if dbErr, ok := err.(*pq.Error); ok {
-			if dbErr.Code.Name() == "unique_violation" {
-				// Mengecek apakah konflik unik terjadi pada kolom yang diindeks dan mengandung deleted_at yang tidak null
-				if strings.Contains(dbErr.Detail, "division_title") || strings.Contains(dbErr.Detail, "division_code") {
-					if strings.Contains(dbErr.Detail, "deleted_at IS NOT NULL") {
-						// Konflik unik terjadi pada data yang telah dihapus lembut
-						return c.JSON(http.StatusCreated, &models.Response{
-							Code:    201,
-							Message: "Sukses menambahkan division. Division sudah ada dan telah dihapus lembut!",
-							Status:  false,
-						})
-					} else {
-						// Konflik unik terjadi pada data yang masih aktif
-						return c.JSON(http.StatusBadRequest, &models.Response{
-							Code:    400,
-							Message: "Gagal menambahkan division. Division sudah ada!",
-							Status:  false,
-						})
-					}
-				}
-			}
-		}
-
-		return c.JSON(http.StatusInternalServerError, &models.Response{
-			Code:    500,
-			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
-			Status:  false,
-		})
-	}
-
-	return c.JSON(http.StatusCreated, &models.Response{
-		Code:    201,
-		Message: "Berhasil menambahkan division!",
-		Status:  true,
-	})
 }
 
 func UpdateDivision(c echo.Context) error {
