@@ -13,7 +13,6 @@ import (
 
 	jose "github.com/dvsekhvalnov/jose2go"
 	"github.com/labstack/echo/v4"
-	"github.com/lib/pq"
 )
 
 func DecryptJWE(jweToken string, secretKey string) (string, error) {
@@ -196,7 +195,6 @@ func UpdateApp(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
 	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
 
-	// Periksa apakah tokenString tidak kosong
 	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -217,7 +215,7 @@ func UpdateApp(c echo.Context) error {
 	// Hapus "Bearer " dari tokenString
 	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
 
-	// Langkah 1: Mendekripsi token JWE
+	//dekripsi token JWE
 	decrypted, err := DecryptJWE(tokenOnly, secretKey)
 	if err != nil {
 		fmt.Println("Gagal mendekripsi token:", err)
@@ -274,20 +272,18 @@ func UpdateApp(c echo.Context) error {
 	}
 
 	if err == nil {
+		var existingAppID int
+		err := db.QueryRow("SELECT application_id FROM application_ms WHERE (application_title = $1 OR application_code = $2) AND deleted_at IS NULL", editApp.Title, editApp.Code).Scan(&existingAppID)
+		if err == nil {
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Application sudah ada! Application tidak boleh sama!",
+				Status:  false,
+			})
+		}
+
 		_, errService := service.UpdateApp(editApp, id, userUUID)
 		if errService != nil {
-			if dbErr, ok := errService.(*pq.Error); ok {
-				// Check for duplicate key violation (unique constraint violation)
-				if dbErr.Code.Name() == "unique_violation" {
-					log.Println(dbErr)
-					return c.JSON(http.StatusBadRequest, &models.Response{
-						Code:    400,
-						Message: "Application sudah ada! Application tidak boleh sama!",
-						Status:  false,
-					})
-				}
-			}
-
 			log.Println("Kesalahan selama pembaruan:", errService)
 			return c.JSON(http.StatusInternalServerError, &models.Response{
 				Code:    500,

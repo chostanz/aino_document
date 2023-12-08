@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/lib/pq"
 )
 
 func GetAllDivision(c echo.Context) error {
@@ -184,9 +183,8 @@ func AddDivision(c echo.Context) error {
 
 func UpdateDivision(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
-	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+	secretKey := "secretJwToken"
 
-	// Periksa apakah tokenString tidak kosong
 	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -207,7 +205,7 @@ func UpdateDivision(c echo.Context) error {
 	// Hapus "Bearer " dari tokenString
 	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
 
-	// Langkah 1: Mendekripsi token JWE
+	//dekripsi token JWE
 	decrypted, err := DecryptJWE(tokenOnly, secretKey)
 	if err != nil {
 		fmt.Println("Gagal mendekripsi token:", err)
@@ -263,20 +261,18 @@ func UpdateDivision(c echo.Context) error {
 		})
 	}
 	if err == nil {
+		var existingDivisionID int
+		err := db.QueryRow("SELECT division_id FROM division_ms WHERE (division_title = $1 OR division_code = $2) AND deleted_at IS NULL", editDivision.Title, editDivision.Code).Scan(&existingDivisionID)
+
+		if err == nil {
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Division sudah ada! Division tidak boleh sama!",
+				Status:  false,
+			})
+		}
 		_, errService := service.UpdateDivision(editDivision, id, userUUID)
 		if errService != nil {
-			if dbErr, ok := errService.(*pq.Error); ok {
-				// Check for duplicate key violation (unique constraint violation)
-				if dbErr.Code.Name() == "unique_violation" {
-					log.Printf("error duplikat: %s", dbErr)
-					return c.JSON(http.StatusBadRequest, &models.Response{
-						Code:    400,
-						Message: "Division sudah ada! Division tidak boleh sama!",
-						Status:  false,
-					})
-				}
-			}
-
 			log.Println("Kesalahan selama pembaruan:", errService)
 			return c.JSON(http.StatusInternalServerError, &models.Response{
 				Code:    500,

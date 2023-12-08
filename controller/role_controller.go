@@ -13,7 +13,6 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
-	"github.com/lib/pq"
 )
 
 var db *sqlx.DB = database.Connection()
@@ -264,21 +263,19 @@ func UpdateRole(c echo.Context) error {
 		})
 	}
 	if err == nil {
+		var existingRoleID int
+		err := db.QueryRow("SELECT role_id FROM role_ms WHERE (role_title = $1 OR role_code = $2) AND deleted_at IS NULL", editRole.Title, editRole.Code).Scan(&existingRoleID)
+
+		if err == nil {
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Role sudah ada! Role tidak boleh sama!",
+				Status:  false,
+			})
+		}
+
 		_, errService := service.UpdateRole(editRole, id, userUUID)
 		if errService != nil {
-			if dbErr, ok := errService.(*pq.Error); ok {
-				// Check for duplicate key violation (unique constraint violation)
-				if dbErr.Code.Name() == "unique_violation" {
-					log.Println(dbErr)
-					return c.JSON(http.StatusBadRequest, &models.Response{
-						Code:    400,
-						Message: "Role sudah ada! Role tidak boleh sama!",
-						Status:  false,
-					})
-				}
-			}
-
-			log.Println("Kesalahan selama pembaruan:", errService)
 			return c.JSON(http.StatusInternalServerError, &models.Response{
 				Code:    500,
 				Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
