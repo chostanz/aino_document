@@ -59,13 +59,6 @@ func AddDivision(addDivision models.Division, userUUID string) error {
 	if errP != nil {
 		return errP
 	}
-	// var existingDivisionID int
-	// err := db.QueryRow("SELECT division_id FROM division_ms WHERE (division_title = $1 OR division_code = $2) AND deleted_at IS NOT NULL", addDivision.Title, addDivision.Code).Scan(&existingDivisionID)
-
-	// if err == nil {
-	// 	// Duplikat ditemukan, kembalikan kesalahan
-	// 	log.Print("Role dengan judul atau kode yang sama sudah ada")
-	// }
 
 	currentTimestamp := time.Now().UnixNano() / int64(time.Microsecond)
 	uniqueID := uuid.New().ID()
@@ -119,19 +112,11 @@ func RestoreSoftDeletedDivision(divisionID int, userUUID string, addDivision mod
 	}
 
 	log.Printf("Restoring division with ID: %d", divisionID)
-	// Lakukan UPDATE untuk mengembalikan division yang dihapus lembut
 	_, err := db.Exec("UPDATE division_ms SET created_at = NOW(), created_by = $2, updated_at = NULL, updated_by = '', deleted_at = NULL, deleted_by = '', division_code = $3, division_title = $4 WHERE division_id = $1", divisionID, username, addDivision.Code, addDivision.Title)
 	if err != nil {
 		log.Printf("Error during division restore: %s", err)
 		return err
 	}
-
-	// Lakukan proses restore terkait di user_application_role_ms
-	// _, err = db.Exec("UPDATE user_application_role_ms SET created_at = NOW(), created_by = $2,  deleted_at = NULL, deleted_by = '' WHERE division_id = $1", divisionID, username)
-	// if err != nil {
-	// 	log.Printf("Error user app role: %s", err)
-	// 	return err
-	// }
 
 	return nil
 }
@@ -161,8 +146,6 @@ func DeleteDivision(id string, userUUID string) error {
 		return err
 	}
 
-	// Melakukan pembaruan pada user_application_role_ms
-	// ...
 	_, err = db.Exec("UPDATE user_application_role_ms SET division_id = 0 WHERE division_id = $1 AND deleted_at IS NULL", deletedDivisionID)
 	if err != nil {
 		log.Print(err)

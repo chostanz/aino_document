@@ -59,7 +59,6 @@ func GetAllAppRole() ([]models.ApplicationRole, error) {
 
 		if err := rows.StructScan(&place); err != nil {
 			log.Print(err)
-			// Handle error, bisa dengan menghentikan loop atau memberikan penanganan sesuai kebutuhan
 			continue
 		}
 		applicationRole = append(applicationRole, place)

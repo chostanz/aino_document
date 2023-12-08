@@ -117,9 +117,7 @@ func UpdateRole(updateRole models.Role, id string, userUUID string) (models.Role
 
 func RestoreSoftDeletedRole(roleID int, userUUID string, addRole models.Role) error {
 	username, _ := GetUsernameByID(userUUID)
-	// Cari role yang dihapus lembut dengan role_title tertentu
 	log.Printf("Restoring role with ID: %d", roleID)
-	// Lakukan UPDATE untuk mengembalikan division yang dihapus lembut
 	_, err := db.Exec("UPDATE role_ms SET created_at = NOW(), created_by = $2, updated_at = NULL, updated_by = '',  deleted_at = NULL, deleted_by = '', role_code = $3, role_title = $4 WHERE role_id = $1", roleID, username, addRole.Code, addRole.Title)
 	if err != nil {
 		log.Printf("Error during role restore: %s", err)

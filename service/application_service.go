@@ -67,18 +67,6 @@ func AddApplication(addApplication models.Application, userUUID string) error {
 		return errP
 	}
 
-	// var exsitingAppID int
-	// errP = db.QueryRow("SELECT application_id FROM application_ms WHERE (application_title = $1 OR application_code = $2) AND deleted_at IS NOT NULL", addApplication.Title, addApplication.Code).Scan(&exsitingAppID)
-
-	// // Jika data ditemukan
-	// if errP == nil {
-	// 	// Duplikat ditemukan dan sudah dihapus lembut, kembalikan data yang dihapus lembut berdasarkan division_id
-	// 	errP = RestoreSoftDeletedApp(exsitingAppID, userUUID, addApplication)
-	// 	if errP != nil {
-	// 		log.Printf("error restore : %s", errP)
-	// 		return errP
-	// 	}
-	// }
 	currentTimestamp := time.Now().UnixNano() / int64(time.Microsecond)
 	uniqueID := uuid.New().ID()
 
@@ -169,9 +157,7 @@ func UpdateApp(updateApp models.Application, id string, userUUID string) (models
 
 func RestoreSoftDeletedApp(appID int, userUUID string, addApplication models.Application) error {
 	username, _ := GetUsernameByID(userUUID)
-	// Cari role yang dihapus lembut dengan role_title tertentu
 	log.Printf("Restoring app with ID: %d", appID)
-	// Lakukan UPDATE untuk mengembalikan division yang dihapus lembut
 	_, err := db.Exec("UPDATE application_ms SET created_at = NOW(), created_by = $2, updated_at = NULL, updated_by = '',  deleted_at = NULL, deleted_by = '', application_code = $3, application_title = $4 WHERE application_id = $1", appID, username, addApplication.Code, addApplication.Title)
 	if err != nil {
 		log.Printf("Error during application restore: %s", err)

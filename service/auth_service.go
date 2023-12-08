@@ -211,7 +211,6 @@ func Login(userLogin models.Login) (string, string, string, int, bool, error) {
 }
 
 func UpdateUserProfile(userUpdate models.UpdateUser, id string, userUUID string) error {
-	// Dapatkan ID pengguna dari user_ms berdasarkan user_uuid
 	var userID int64
 	err := db.Get(&userID, "SELECT user_id FROM user_ms WHERE user_uuid = $1", userUUID)
 	if err != nil {
