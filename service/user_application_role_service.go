@@ -58,7 +58,7 @@ func GetUsernameByUserAppRoleUUID(userAppRoleUUID string) (string, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Tidak ada baris yang sesuai, handle sesuai kebutuhan Anda
-			log.Println("No rows found for user_application_role_uuid:", userAppRoleUUID)
+			log.Println("No rows found for user_application_role_uuid:")
 			return "", nil // Mengembalikan nilai kosong, bukan kesalahan
 		}
 

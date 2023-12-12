@@ -224,6 +224,7 @@ func DeleteUserAppRole(c echo.Context) error {
 	if err == nil {
 		errService := service.DeleteUserAppRole(id, userUUID)
 		if errService == service.ErrNotFound {
+			log.Printf("error kenapa %s", errService)
 			return c.JSON(http.StatusNotFound, &models.Response{
 				Code:    404,
 				Message: "Gagal menghapus user. User tidak ditemukan!",
