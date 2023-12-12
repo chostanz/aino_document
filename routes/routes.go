@@ -35,11 +35,14 @@ func Route() *echo.Echo {
 	superAdminGroup.PUT("/application/delete/:id", controller.DeleteApp)
 	superAdminGroup.PUT("/application/role/delete/:id", controller.DeleteAppRole)
 
+	superAdminGroup.PUT("/user/:id", controller.DeleteUserAppRole)
 	authGroup := r.Group("/auth")
 	authGroup.Use(middleware.AuthMiddleware)
 	authGroup.PUT("/change/password", controller.ChangePassword)
 
-	r.GET("/user/application/role", controller.GetUserAppRole)
+	superAdminGroup.PUT("/user/update/:id", controller.UpdateUserAppRole)
+	r.GET("/user/:id", controller.ShowAppRoleById)
+	superAdminGroup.GET("/user/all", controller.GetUserAppRole)
 	r.GET("/division/all", controller.GetAllDivision)
 	r.GET("/role/all", controller.GetAllRole)
 	r.GET("/application/all", controller.GetAllApp)
