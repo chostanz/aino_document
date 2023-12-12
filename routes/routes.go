@@ -40,7 +40,7 @@ func Route() *echo.Echo {
 	authGroup.Use(middleware.AuthMiddleware)
 	authGroup.PUT("/change/password", controller.ChangePassword)
 
-	superAdminGroup.PUT("/user/update/:id", controller.UpdateUserAppRole)
+	superAdminGroup.PUT("/user/update/:user_application_role_uuid", controller.UpdateUserAppRole)
 	r.GET("/user/:id", controller.ShowAppRoleById)
 	superAdminGroup.GET("/user/all", controller.GetUserAppRole)
 	r.GET("/division/all", controller.GetAllDivision)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"aino_document/models"
+	"database/sql"
 	"log"
 	"time"
 )
@@ -11,13 +12,20 @@ func GetUserApplicationRole() ([]models.Users, error) {
 
 	rows, err := db.Queryx("SELECT u.user_uuid, uar.user_application_role_uuid, u.user_name, u.user_email, r.role_title, a.application_title, d.division_title, uar.created_by, uar.created_at, uar.updated_by, uar.updated_at FROM user_ms u INNER JOIN user_application_role_ms uar ON u.user_id = uar.user_id INNER JOIN application_role_ms ar ON uar.application_role_id = ar.application_role_id INNER JOIN application_ms a ON ar.application_id = a.application_id INNER JOIN role_ms r ON ar.role_id = r.role_id INNER JOIN division_ms d ON uar.division_id = d.division_id WHERE uar.deleted_at IS NULL")
 	if err != nil {
+		log.Println("Error querying database:", err)
 		return nil, err
 	}
+
 	for rows.Next() {
 		place := models.Users{}
-		rows.StructScan(&place)
+		err := rows.StructScan(&place)
+		if err != nil {
+			log.Println("Error scanning row to struct:", err)
+			continue
+		}
 		getUserAppRole = append(getUserAppRole, place)
 	}
+
 	return getUserAppRole, nil
 }
 
@@ -31,15 +39,48 @@ func GetSpecUseApplicationRole(id string) (models.Users, error) {
 	return users, nil
 
 }
-func GetUsernameByUserAppRoleUUID(userAppRoleUUID string) (string, error) {
-	var username string
 
-	err := db.Get(&username, "SELECT u.user_name FROM user_ms u JOIN user_application_role_ms uarm ON u.user_uuid = uarm.user_uuid WHERE uarm.user_application_role_uuid = $1", userAppRoleUUID)
+// func GetUsernameByUserAppRoleUUID(userAppRoleUUID string) (string, error) {
+// 	var username string
+
+// 	err := db.Get(&username, "SELECT u.user_name FROM user_ms u JOIN user_application_role_ms uarm ON u.user_id = uarm.user_id WHERE uarm.user_application_role_uuid = $1", userAppRoleUUID)
+// 	if err != nil {
+// 		log.Println("Error getting username by user_application_role_uuid:", err)
+// 		return "", err
+// 	}
+
+//		return username, nil
+//	}
+func GetUsernameByUserAppRoleUUID(userAppRoleUUID string) (string, error) {
+	var user_uuid string
+
+	err := db.Get(&user_uuid, "SELECT u.user_uuid FROM user_ms u JOIN user_application_role_ms uarm ON u.user_id = uarm.user_id WHERE uarm.user_application_role_uuid = $1", userAppRoleUUID)
 	if err != nil {
-		log.Println("Error getting username by user_application_role_uuid:", err)
+		if err == sql.ErrNoRows {
+			// Tidak ada baris yang sesuai, handle sesuai kebutuhan Anda
+			log.Println("No rows found for user_application_role_uuid:", userAppRoleUUID)
+			return "", nil // Mengembalikan nilai kosong, bukan kesalahan
+		}
+
+		// Terjadi kesalahan lain, log dan kembalikan error
+		log.Println("Error getting user uuid by user_application_role_uuid:", err)
 		return "", err
 	}
 
+	return user_uuid, nil
+}
+
+func GetUsernameByIDUser(user_uuid string) (string, error) {
+	userUUID, errUser := GetUsernameByUserAppRoleUUID(user_uuid)
+	if errUser != nil {
+		log.Print(errUser)
+		return "", errUser
+	}
+	var username string
+	err := db.QueryRow("SELECT user_name from user_ms WHERE user_uuid = $1", userUUID).Scan(&username)
+	if err != nil {
+		return "", err
+	}
 	return username, nil
 }
 
@@ -121,9 +162,34 @@ func GetUsernameByUserAppRoleUUID(userAppRoleUUID string) (string, error) {
 // }
 
 func UpdateUserAppRole(updateUserAppRole models.UpdateUser, userApplicationRoleUUID string) (models.UpdateUser, error) {
-	username, errUser := GetUsernameByUserAppRoleUUID(userApplicationRoleUUID)
+	// username, errUser := GetUsernameByUserAppRoleUUID(userApplicationRoleUUID)
+	// if errUser != nil {
+	// 	log.Print(errUser)
+	// 	return models.UpdateUser{}, errUser
+	// }
+	userUUID, errUUID := GetUsernameByUserAppRoleUUID(userApplicationRoleUUID)
+	if errUUID != nil {
+		if errUUID == sql.ErrNoRows {
+			// Tidak ada baris yang sesuai, handle sesuai kebutuhan Anda
+			log.Println("No rows found for user_application_role_uuid:", userApplicationRoleUUID)
+			return models.UpdateUser{}, errUUID
+		}
+
+		// Terjadi kesalahan lain, log dan kembalikan error
+		log.Println("Error getting user uuid by user_application_role_uuid:", errUUID)
+		return models.UpdateUser{}, errUUID
+	}
+
+	username, errUser := GetUsernameByIDUser(userUUID)
 	if errUser != nil {
-		log.Print(errUser)
+		if errUser == sql.ErrNoRows {
+			// Tidak ada baris yang sesuai, handle sesuai kebutuhan Anda
+			log.Println("No rows found for user_uuid:", userUUID)
+			return models.UpdateUser{}, errUser
+		}
+
+		// Terjadi kesalahan lain, log dan kembalikan error
+		log.Println("Error getting username by user_uuid:", errUser)
 		return models.UpdateUser{}, errUser
 	}
 

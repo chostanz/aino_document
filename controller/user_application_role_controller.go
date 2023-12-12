@@ -142,9 +142,9 @@ func UpdateUserAppRole(c echo.Context) error {
 			})
 		}
 
-		userApplicationRoleEUUID := c.Param("userApplicationRoleUUID")
+		userApplicationRoleUUID := c.Param("userApplicationRoleUUID")
 
-		_, addroleErr := service.UpdateUserAppRole(updateUserAppRole, userApplicationRoleEUUID)
+		_, addroleErr := service.UpdateUserAppRole(updateUserAppRole, userApplicationRoleUUID)
 		if addroleErr != nil {
 			return c.JSON(http.StatusInternalServerError, &models.Response{
 				Code:    500,
