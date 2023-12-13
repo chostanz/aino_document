@@ -59,9 +59,8 @@ func ShowAppRoleById(c echo.Context) error {
 func UpdateUserAppRole(c echo.Context) error {
 
 	tokenString := c.Request().Header.Get("Authorization")
-	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
+	secretKey := "secretJwToken"
 
-	// Periksa apakah tokenString tidak kosong
 	if tokenString == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -70,7 +69,6 @@ func UpdateUserAppRole(c echo.Context) error {
 		})
 	}
 
-	// Periksa apakah tokenString mengandung "Bearer "
 	if !strings.HasPrefix(tokenString, "Bearer ") {
 		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 			"code":    401,
@@ -79,10 +77,9 @@ func UpdateUserAppRole(c echo.Context) error {
 		})
 	}
 
-	// Hapus "Bearer " dari tokenString
 	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
 
-	// Langkah 1: Mendekripsi token JWE
+	// Mendekripsi token JWE
 	decrypted, errDec := DecryptJWE(tokenOnly, secretKey)
 	if errDec != nil {
 		fmt.Println("Gagal mendekripsi token:", errDec)
@@ -135,6 +132,7 @@ func UpdateUserAppRole(c echo.Context) error {
 		err := db.QueryRow("SELECT user_id FROM user_ms WHERE (user_name = $1 OR user_email = $2) AND deleted_at IS NULL", updateUserAppRole.Username, updateUserAppRole.Email).Scan(&existingUserID)
 
 		if err == nil {
+			log.Print(err)
 			return c.JSON(http.StatusBadRequest, &models.Response{
 				Code:    400,
 				Message: "Username atau email telah digunakan!",
@@ -142,10 +140,12 @@ func UpdateUserAppRole(c echo.Context) error {
 			})
 		}
 
-		userApplicationRoleUUID := c.Param("userApplicationRoleUUID")
+		userApplicationRoleUUID := c.Param("user_application_role_uuid")
+		log.Println("user_application_role_uuid from URL:", userApplicationRoleUUID)
 
 		_, addroleErr := service.UpdateUserAppRole(updateUserAppRole, userApplicationRoleUUID)
 		if addroleErr != nil {
+			log.Printf("Error updating user application role: %v", addroleErr)
 			return c.JSON(http.StatusInternalServerError, &models.Response{
 				Code:    500,
 				Message: "Terjadi kesalahan internal pada server.",
@@ -155,7 +155,7 @@ func UpdateUserAppRole(c echo.Context) error {
 
 		return c.JSON(http.StatusCreated, &models.Response{
 			Code:    201,
-			Message: "Berhasil membuat akun!",
+			Message: "Berhasil mengupdate akun!",
 			Status:  true,
 		})
 	} else {
