@@ -41,6 +41,25 @@ func GetSpecUseApplicationRole(id string) (models.Users, error) {
 
 }
 
+func GetUserByUsernameAndEmail(userApplicationRoleUUID string) (models.UsernameEmail, error) {
+	var user models.UsernameEmail
+
+	err := db.Get(&user, "SELECT user_name, user_email FROM user_ms WHERE user_id = (SELECT user_id FROM user_application_role_ms WHERE user_application_role_uuid = $1)", userApplicationRoleUUID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Tidak ada baris yang sesuai, handle sesuai kebutuhan Anda
+			log.Println("No rows found for user_application_role_uuid:", userApplicationRoleUUID)
+			return models.UsernameEmail{}, err
+		}
+
+		// Terjadi kesalahan lain, log dan kembalikan error
+		log.Println("Error getting user data by user_application_role_uuid:", err)
+		return models.UsernameEmail{}, err
+	}
+
+	return user, nil
+}
+
 func GetUsernameByUserAppRoleUUID(userAppRoleUUID string) (string, error) {
 	var user_uuid string
 
@@ -72,6 +91,15 @@ func GetUsernameByIDUser(user_uuid string) (string, error) {
 	return username, nil
 }
 
+func IsUniqueUsernameOrEmail(userUUID, username, email string) (bool, error) {
+	var count int
+	err := db.Get(&count, "SELECT COUNT(*) FROM user_ms WHERE (user_name = $1 OR user_email = $2) AND user_uuid != $3 AND deleted_at IS NULL", username, email, userUUID)
+	if err != nil {
+		return false, err
+	}
+	return count == 0, nil
+}
+
 func UpdateUserAppRole(updateUserAppRole models.UpdateUser, userApplicationRoleUUID string) (models.UpdateUser, error) {
 	userUUID, err := GetUsernameByUserAppRoleUUID(userApplicationRoleUUID)
 	if err != nil {
@@ -91,6 +119,17 @@ func UpdateUserAppRole(updateUserAppRole models.UpdateUser, userApplicationRoleU
 	log.Println("user_application_role_uuid:", userApplicationRoleUUID)
 
 	currentTime := time.Now()
+
+	// isUnique, err := isUniqueUsernameOrEmail(userApplicationRoleUUID, updateUserAppRole.Username, updateUserAppRole.Email)
+	// if err != nil {
+	// 	log.Println("Error checking uniqueness:", err)
+	// 	return models.UpdateUser{}, err
+	// }
+
+	// if !isUnique {
+	// 	log.Println("Username atau email telah digunakan oleh data lain.")
+	// 	return models.UpdateUser{}, err
+	// }
 
 	_, errInsert := db.NamedExec("UPDATE user_ms SET user_name = :user_name, user_email = :user_email, updated_by = :updated_by, updated_at = :updated_at  WHERE user_id = (SELECT user_id FROM user_application_role_ms WHERE user_application_role_uuid = :user_application_role_uuid)", map[string]interface{}{
 		"user_name":                  updateUserAppRole.Username,
@@ -193,11 +232,27 @@ func DeleteUserAppRole(id, userUUID string) error {
 		log.Print(err)
 		return err
 	}
-
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected == 0 {
 		return ErrNotFound
 	}
 
+	var userID int64
+	err = db.Get(&userID, "SELECT user_id FROM user_application_role_ms WHERE user_application_role_uuid = $1", id)
+	if err != nil {
+		log.Print(err)
+		return err
+	}
+
+	// Update user_ms
+	_, err = db.NamedExec("UPDATE user_ms SET deleted_by = :deleted_by, deleted_at = :deleted_at WHERE user_id = :user_id AND deleted_at IS NULL", map[string]interface{}{
+		"deleted_by": username,
+		"deleted_at": currentTime,
+		"user_id":    userID,
+	})
+	if err != nil {
+		log.Print(err)
+		return err
+	}
 	return nil
 }

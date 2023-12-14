@@ -128,20 +128,85 @@ func UpdateUserAppRole(c echo.Context) error {
 	err := c.Validate(&updateUserAppRole)
 
 	if err == nil {
-		var existingUserID int
-		err := db.QueryRow("SELECT user_id FROM user_ms WHERE (user_name = $1 OR user_email = $2) AND deleted_at IS NULL", updateUserAppRole.Username, updateUserAppRole.Email).Scan(&existingUserID)
+		// var existingUserID int
+		// err := db.QueryRow("SELECT user_id FROM user_ms WHERE (user_name = $1 OR user_email = $2) AND deleted_at IS NULL", updateUserAppRole.Username, updateUserAppRole.Email).Scan(&existingUserID)
 
-		if err == nil {
-			log.Print(err)
-			return c.JSON(http.StatusBadRequest, &models.Response{
-				Code:    400,
-				Message: "Username atau email telah digunakan!",
+		// if err == nil {
+		// 	log.Print(err)
+		// 	return c.JSON(http.StatusBadRequest, &models.Response{
+		// 		Code:    400,
+		// 		Message: "Username atau email telah digunakan!",
+		// 		Status:  false,
+		// 	})
+		// }
+		userApplicationRoleUUID := c.Param("user_application_role_uuid")
+		log.Println("user_application_role_uuid from URL:", userApplicationRoleUUID)
+
+		existingUser, err := service.GetUserByUsernameAndEmail(userApplicationRoleUUID)
+		if err != nil {
+			log.Printf("Error getting existing user data: %v", err)
+			return c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Terjadi kesalahan internal pada server.",
 				Status:  false,
 			})
 		}
 
-		userApplicationRoleUUID := c.Param("user_application_role_uuid")
-		log.Println("user_application_role_uuid from URL:", userApplicationRoleUUID)
+		// Data username atau email berubah, lakukan validasi unik
+		if updateUserAppRole.Username == existingUser.UserName || updateUserAppRole.Email == existingUser.UserEmail {
+			isUnique, err := service.IsUniqueUsernameOrEmail(userApplicationRoleUUID, updateUserAppRole.Username, updateUserAppRole.Email)
+			if err != nil {
+				log.Println("Error checking uniqueness:", err)
+				return c.JSON(http.StatusInternalServerError, &models.Response{
+					Code:    500,
+					Message: "Terjadi kesalahan internal pada server.",
+					Status:  false,
+				})
+			}
+
+			if !isUnique {
+				log.Println("Username atau email telah digunakan oleh data lain.")
+				return c.JSON(http.StatusBadRequest, &models.Response{
+					Code:    400,
+					Message: "Username atau email telah digunakan oleh data lain!",
+					Status:  false,
+				})
+			}
+		}
+		// if updateUserAppRole.Username == existingUser.UserName || updateUserAppRole.Email == existingUser.UserEmail {
+		// 	// Data username atau email berubah, lakukan validasi unik
+		// 	var existingUserID int
+		// 	err := db.QueryRow("SELECT user_id FROM user_ms WHERE (user_name = $1 OR user_email = $2) AND deleted_at IS NULL", updateUserAppRole.Username, updateUserAppRole.Email).Scan(&existingUserID)
+
+		// 	if err == nil {
+		// 		// User dengan username atau email yang sama sudah ada
+		// 		log.Print(err)
+		// 		return c.JSON(http.StatusBadRequest, &models.Response{
+		// 			Code:    400,
+		// 			Message: "Username atau email telah digunakan!",
+		// 			Status:  false,
+		// 		})
+		// 	} else if err != sql.ErrNoRows {
+		// 		// Terjadi kesalahan lain saat menjalankan query
+		// 		log.Print(err)
+		// 		return c.JSON(http.StatusInternalServerError, &models.Response{
+		// 			Code:    500,
+		// 			Message: "Terjadi kesalahan internal pada server.",
+		// 			Status:  false,
+		// 		})
+		// 	}
+		// }
+
+		//beda
+		// // Bandingkan nilai username dan user_email dengan yang baru diterima
+		// if existingUser.UserName != updateUserAppRole.Username || existingUser.UserEmail != updateUserAppRole.Email {
+		// 	// Jika nilai berubah, tolak pembaruan
+		// 	return c.JSON(http.StatusBadRequest, &models.Response{
+		// 		Code:    400,
+		// 		Message: "Username atau email telah digunakan!",
+		// 		Status:  false,
+		// 	})
+		// }
 
 		_, addroleErr := service.UpdateUserAppRole(updateUserAppRole, userApplicationRoleUUID)
 		if addroleErr != nil {

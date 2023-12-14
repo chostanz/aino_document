@@ -89,14 +89,14 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	}
 
 	AppRoleId := currentTimestamp + int64(uniqueID)
+	uudiNew := uuid.String()
 	// Insert data ke application_role_ms
-	_, err = db.Exec("INSERT INTO application_role_ms(application_role_id, application_id, role_id, created_by) VALUES ($1, $2, $3, $4)",
-		AppRoleId, applicationID, roleID, username)
+	_, err = db.Exec("INSERT INTO application_role_ms(application_role_uuid, application_role_id, application_id, role_id, created_by) VALUES ($1, $2, $3, $4, $5)",
+		uudiNew, AppRoleId, applicationID, roleID, username)
 	if err != nil {
 		log.Println("Error inserting data into application_role_ms:", err)
 		return err
 	}
-	log.Println("Data inserted into application_role_ms successfully")
 
 	// Get application_role_id
 	var applicationRoleID int64

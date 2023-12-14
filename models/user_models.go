@@ -20,3 +20,9 @@ type Users struct {
 	Deleted_by        sql.NullString `json:"deleted_by" db:"deleted_by"`
 	Deleted_at        sql.NullTime   `json:"deleted_at" db:"deleted_at"`
 }
+
+type UsernameEmail struct {
+	UserAppRole string `json:"user_application_role_uuid" db:"user_application_role_uuid"`
+	UserName    string `json:"user_name" db:"user_name"`
+	UserEmail   string `json:"user_email" db:"user_email"`
+}
