@@ -107,7 +107,6 @@ func UpdateUserAppRole(updateUserAppRole models.UpdateUser, userApplicationRoleU
 	}
 
 	var username string
-
 	username, errUser := GetUsernameByIDUser(userUUID)
 	if errUser != nil {
 		if errUser == sql.ErrNoRows {

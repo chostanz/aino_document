@@ -127,11 +127,22 @@ func RegisterUser(c echo.Context) error {
 
 		addroleErr := service.RegisterUser(userRegister, userUUID)
 		if addroleErr != nil {
+			if validationErr, ok := addroleErr.(*service.ValidationError); ok {
+				if validationErr.Tag == "strong_password" {
+					return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+						Code:    422,
+						Message: "Password harus memiliki setidaknya 8 karakter",
+						Status:  false,
+					})
+				}
+			}
+			log.Println(addroleErr)
 			return c.JSON(http.StatusInternalServerError, &models.Response{
 				Code:    500,
 				Message: "Terjadi kesalahan internal pada server.",
 				Status:  false,
 			})
+
 		}
 
 		return c.JSON(http.StatusCreated, &models.Response{
