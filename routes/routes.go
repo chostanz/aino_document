@@ -31,7 +31,6 @@ func Route() *echo.Echo {
 	superAdminGroup.PUT("/role/update/:id", controller.UpdateRole)
 	superAdminGroup.PUT("/application/update/:id", controller.UpdateApp)
 	superAdminGroup.PUT("/application/role/update/:id", controller.UpdateAppRole)
-	superAdminGroup.PUT("/user/update/:id", controller.UpdateUser)
 
 	//delete
 	superAdminGroup.PUT("/role/delete/:id", controller.DeleteRole)

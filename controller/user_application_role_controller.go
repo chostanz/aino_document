@@ -131,6 +131,14 @@ func UpdateUserAppRole(c echo.Context) error {
 		userApplicationRoleUUID := c.Param("user_application_role_uuid")
 		log.Println("user_application_role_uuid from URL:", userApplicationRoleUUID)
 
+		prevUser, errGet := service.GetSpecUseApplicationRole(userApplicationRoleUUID)
+		if errGet != nil {
+			return c.JSON(http.StatusNotFound, &models.Response{
+				Code:    404,
+				Message: "Gagal mengupdate user. User tidak ditemukan!",
+				Status:  false,
+			})
+		}
 		existingUser, err := service.GetUserByUsernameAndEmail(userApplicationRoleUUID)
 		if err != nil {
 			log.Printf("Error getting existing user data: %v", err)
@@ -172,16 +180,17 @@ func UpdateUserAppRole(c echo.Context) error {
 			})
 		}
 
-		return c.JSON(http.StatusCreated, &models.Response{
-			Code:    201,
+		log.Println(prevUser)
+		return c.JSON(http.StatusOK, &models.Response{
+			Code:    200,
 			Message: "Berhasil mengupdate akun!",
 			Status:  true,
 		})
 	} else {
 		log.Println(err)
-		return c.JSON(http.StatusInternalServerError, &models.Response{
-			Code:    500,
-			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Data tidak boleh kosong!",
 			Status:  false,
 		})
 	}

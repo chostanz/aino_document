@@ -246,9 +246,9 @@ func UpdateApp(c echo.Context) error {
 
 	perviousContent, errGet := service.ShowApplicationById(id)
 	if errGet != nil {
-		return c.JSON(http.StatusInternalServerError, &models.Response{
-			Code:    500,
-			Message: "Gagal mengambil data application saat ini. Mohon coba beberapa saat lagi!",
+		return c.JSON(http.StatusNotFound, &models.Response{
+			Code:    404,
+			Message: "Gagal mengupdate application. Application tidak ditemukan!",
 			Status:  false,
 		})
 	}

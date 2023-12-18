@@ -152,9 +152,9 @@ func RegisterUser(c echo.Context) error {
 		})
 	} else {
 		log.Println(err)
-		return c.JSON(http.StatusInternalServerError, &models.Response{
-			Code:    500,
-			Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Data tidak boleh kosong!",
 			Status:  false,
 		})
 	}
@@ -268,95 +268,6 @@ func Logout(c echo.Context) error {
 		Code:    200,
 		Message: "Berhasil Logout!",
 		Status:  true,
-	})
-}
-
-func UpdateUser(c echo.Context) error {
-	tokenString := c.Request().Header.Get("Authorization")
-	secretKey := "secretJwToken" // Ganti dengan kunci yang benar
-
-	// Periksa apakah tokenString tidak kosong
-	if tokenString == "" {
-		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-			"code":    401,
-			"message": "Token tidak ditemukan!",
-			"status":  false,
-		})
-	}
-
-	// Periksa apakah tokenString mengandung "Bearer "
-	if !strings.HasPrefix(tokenString, "Bearer ") {
-		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-			"code":    401,
-			"message": "Token tidak valid!",
-			"status":  false,
-		})
-	}
-
-	// Hapus "Bearer " dari tokenString
-	tokenOnly := strings.TrimPrefix(tokenString, "Bearer ")
-
-	// Langkah 1: Mendekripsi token JWE
-	decrypted, errDec := DecryptJWE(tokenOnly, secretKey)
-	if errDec != nil {
-		fmt.Println("Gagal mendekripsi token:", errDec)
-		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-			"code":    401,
-			"message": "Token tidak valid!",
-			"status":  false,
-		})
-	}
-
-	var claims JwtCustomClaims
-	errJ := json.Unmarshal([]byte(decrypted), &claims)
-	if errJ != nil {
-		fmt.Println("Gagal mengurai klaim:", errJ)
-		return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-			"code":    401,
-			"message": "Token tidak valid!",
-			"status":  false,
-		})
-	}
-	userUUID := c.Get("user_uuid").(string)
-	_, errK := service.GetUserInfoFromToken(tokenOnly)
-	if errK != nil {
-		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
-	}
-
-	id := userUUID
-
-	var updateUser models.UpdateUser
-	if err := c.Bind(&updateUser); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"code":    400,
-			"message": "Data invalid!",
-			"status":  false,
-		})
-	}
-
-	// Validasi data pembaruan
-	if err := c.Validate(&updateUser); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"code":    422,
-			"message": "Data tidak boleh kosong!",
-			"status":  false,
-		})
-	}
-
-	// Panggil fungsi UpdateUserProfile dari service
-	if err := service.UpdateUserProfile(updateUser, id, userUUID); err != nil {
-		log.Println("Error updating user profile:", err)
-		return c.JSON(http.StatusInternalServerError, map[string]interface{}{
-			"code":    500,
-			"message": "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi",
-			"status":  false,
-		})
-	}
-
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"code":    200,
-		"message": "Profil pengguna telah diperbarui!",
-		"status":  true,
 	})
 }
 

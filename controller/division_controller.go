@@ -236,9 +236,9 @@ func UpdateDivision(c echo.Context) error {
 
 	perviousContent, errGet := service.ShowDivisionById(id)
 	if errGet != nil {
-		return c.JSON(http.StatusInternalServerError, &models.Response{
-			Code:    500,
-			Message: "Gagal mengambil data division saat ini. Mohon coba beberapa saat lagi!",
+		return c.JSON(http.StatusNotFound, &models.Response{
+			Code:    404,
+			Message: "Gagal mengupdate division. Division tidak ditemukan!",
 			Status:  false,
 		})
 	}
