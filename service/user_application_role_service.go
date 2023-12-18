@@ -93,10 +93,28 @@ func GetUsernameByIDUser(user_uuid string) (string, error) {
 
 func IsUniqueUsernameOrEmail(userUUID, username, email string) (bool, error) {
 	var count int
-	err := db.Get(&count, "SELECT COUNT(*) FROM user_ms WHERE (user_name = $1 OR user_email = $2) AND user_uuid != $3 AND deleted_at IS NULL", username, email, userUUID)
+
+	// Cek apakah username atau email sama dengan data yang sudah ada di database
+	var existingUsername, existingEmail string
+	err := db.Get(&existingUsername, "SELECT user_name FROM user_ms WHERE user_uuid = $1", userUUID)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	err = db.Get(&existingEmail, "SELECT user_email FROM user_ms WHERE user_uuid = $1", userUUID)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	if username == existingUsername && email == existingEmail {
+		return true, nil
+	}
+
+	err = db.Get(&count, "SELECT COUNT(*) FROM user_ms WHERE (user_name = $1 OR user_email = $2) AND user_uuid != $3 AND deleted_at IS NULL", username, email, userUUID)
 	if err != nil {
 		return false, err
 	}
+
 	return count == 0, nil
 }
 

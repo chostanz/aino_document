@@ -250,15 +250,15 @@ func UpdateUserProfile(userUpdate models.UpdateUser, id string, userUUID string)
 		return err
 	}
 
-	err = db.Get(&applicationUUID, "SELECT application_role_uuid FROM application_ms WHERE application_role_uuid = $1", userUpdate.ApplicationRole.Application_role_UUID)
+	err = db.Get(&applicationUUID, "SELECT application_uuid FROM application_ms WHERE application_id = $1", applicationID)
 	if err != nil {
-		log.Println("Error getting application_id:", err)
+		log.Println("Error fetching app_uuid:", err)
 		return err
 	}
 
 	// Update data di tabel application_role_ms
 	_, err = db.Exec("UPDATE application_role_ms SET application_id = $1, role_id = $2 WHERE application_uuid = $3",
-		applicationID, roleID, applicationUUID)
+		applicationID, roleID, userUpdate.ApplicationRole.Application_role_UUID)
 	if err != nil {
 		log.Println("Error updating data in application_role_ms:", err)
 		return err
