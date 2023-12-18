@@ -2,6 +2,7 @@ package service
 
 import (
 	"aino_document/models"
+	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -67,12 +68,19 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	}
 
 	// Mendapatkan role_id yang baru saja diinsert
+	log.Printf("Selected Role UUID: %s", userRegister.ApplicationRole.Role_UUID)
+
 	var roleID int64
 	err = db.Get(&roleID, "SELECT role_id FROM role_ms WHERE role_uuid = $1 AND deleted_at IS NULL", userRegister.ApplicationRole.Role_UUID)
 	if err != nil {
-		log.Println("Error getting role_id:", err)
+		if err == sql.ErrNoRows {
+			log.Printf("Role not found for role_uuid: %s", userRegister.ApplicationRole.Role_UUID)
+			return err
+		}
+		log.Printf("Error getting role_id: %v", err)
 		return err
 	}
+	log.Printf("Obtained Role ID: %d", roleID)
 	var applicationID int64
 	err = db.Get(&applicationID, "SELECT application_id FROM application_ms WHERE application_uuid = $1 AND deleted_at IS NULL", userRegister.ApplicationRole.Application_UUID)
 	if err != nil {
