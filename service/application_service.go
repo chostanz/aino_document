@@ -2,6 +2,7 @@ package service
 
 import (
 	"aino_document/models"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -125,6 +126,50 @@ func GetAppById(id int) (models.Application, error) {
 	}
 	return appid, nil
 
+}
+func GetAppCodeAndTitle(uuid string) (models.ApplicationCodeTitle, error) {
+	var app models.ApplicationCodeTitle
+
+	err := db.Get(&app, "SELECT application_code, application_title FROM application_ms WHERE application_uuid = $1", uuid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Tidak ada baris yang sesuai
+			log.Println("No rows found for app_uuid:", uuid)
+			return models.ApplicationCodeTitle{}, err
+		}
+
+		// Terjadi kesalahan lain
+		log.Println("Error getting app data by application_ms:", err)
+		return models.ApplicationCodeTitle{}, err
+	}
+
+	return app, nil
+}
+
+func IsUniqueApp(uuid, code, title string) (bool, error) {
+	var count int
+
+	var exsitingAppCode, exsitingAppTitle string
+	err := db.Get(&exsitingAppCode, "SELECT application_code FROM application_ms WHERE application_uuid = $1", uuid)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	err = db.Get(&exsitingAppTitle, "SELECT application_title FROM application_ms WHERE application_uuid = $1", uuid)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	if code == exsitingAppCode && title == exsitingAppTitle {
+		return true, nil
+	}
+
+	err = db.Get(&count, "SELECT COUNT(*) FROM application_ms WHERE (application_code = $1 OR application_title = $2) AND application_uuid != $3 AND deleted_at IS NULL", code, title, uuid)
+	if err != nil {
+		return false, err
+	}
+
+	return count == 0, nil
 }
 
 func UpdateApp(updateApp models.Application, id string, userUUID string) (models.Application, error) {

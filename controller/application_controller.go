@@ -272,14 +272,35 @@ func UpdateApp(c echo.Context) error {
 	}
 
 	if err == nil {
-		var existingAppID int
-		err := db.QueryRow("SELECT application_id FROM application_ms WHERE (application_title = $1 OR application_code = $2) AND deleted_at IS NULL", editApp.Title, editApp.Code).Scan(&existingAppID)
-		if err == nil {
-			return c.JSON(http.StatusBadRequest, &models.Response{
-				Code:    400,
-				Message: "Application sudah ada! Application tidak boleh sama!",
+		exsitingApp, err := service.GetAppCodeAndTitle(id)
+		if err != nil {
+			log.Printf("Error getting existing app data: %v", err)
+			return c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Terjadi kesalahan internal pada server.",
 				Status:  false,
 			})
+		}
+
+		if editApp.Code != exsitingApp.Code || editApp.Title != exsitingApp.Title {
+			isUnique, err := service.IsUniqueApp(id, editApp.Code, editApp.Title)
+			if err != nil {
+				log.Println("Error checking uniqueness:", err)
+				return c.JSON(http.StatusInternalServerError, &models.Response{
+					Code:    500,
+					Message: "Terjadi kesalahan internal pada server.",
+					Status:  false,
+				})
+			}
+
+			if !isUnique {
+				log.Println("Application sudah ada! Application tidak boleh sama!")
+				return c.JSON(http.StatusBadRequest, &models.Response{
+					Code:    400,
+					Message: "Application sudah ada! Application tidak boleh sama!",
+					Status:  false,
+				})
+			}
 		}
 
 		_, errService := service.UpdateApp(editApp, id, userUUID)

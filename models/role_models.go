@@ -35,3 +35,9 @@ type Roles struct {
 	Deleted_by sql.NullString `json:"deleted_by" db:"deleted_by"`
 	Deleted_at sql.NullTime   `json:"deleted_at" db:"deleted_at"`
 }
+
+type RoleTitleCode struct {
+	UUID  string `json:"role_uuid" db:"role_uuid"`
+	Title string `json:"role_title" db:"role_title"`
+	Code  string `json:"role_code" db:"role_code"`
+}

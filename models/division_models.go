@@ -33,3 +33,9 @@ type Divisions struct {
 	Deleted_by sql.NullString `json:"deleted_by" db:"deleted_by"`
 	Deleted_at sql.NullTime   `json:"deleted_at" db:"deleted_at"`
 }
+
+type DivisionCodeTitle struct {
+	UUID  string `json:"division_uuid" db:"division_uuid"`
+	Code  string `json:"division_code" db:"division_code"`
+	Title string `json:"division_title" db:"division_title"`
+}

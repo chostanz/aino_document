@@ -263,15 +263,35 @@ func UpdateRole(c echo.Context) error {
 		})
 	}
 	if err == nil {
-		var existingRoleID int
-		err := db.QueryRow("SELECT role_id FROM role_ms WHERE (role_title = $1 OR role_code = $2) AND deleted_at IS NULL", editRole.Title, editRole.Code).Scan(&existingRoleID)
-
-		if err == nil {
-			return c.JSON(http.StatusBadRequest, &models.Response{
-				Code:    400,
-				Message: "Role sudah ada! Role tidak boleh sama!",
+		exsitingRole, err := service.GetRoleCodeAndTitle(id)
+		if err != nil {
+			log.Printf("Error getting existing user data: %v", err)
+			return c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Terjadi kesalahan internal pada server.",
 				Status:  false,
 			})
+		}
+
+		if editRole.Code != exsitingRole.Code || editRole.Title != exsitingRole.Title {
+			isUnique, err := service.IsUniqueRole(id, editRole.Code, editRole.Title)
+			if err != nil {
+				log.Println("Error checking uniqueness:", err)
+				return c.JSON(http.StatusInternalServerError, &models.Response{
+					Code:    500,
+					Message: "Terjadi kesalahan internal pada server.",
+					Status:  false,
+				})
+			}
+
+			if !isUnique {
+				log.Println("Role sudah ad! Role tidak boleh sama!")
+				return c.JSON(http.StatusBadRequest, &models.Response{
+					Code:    400,
+					Message: "Role sudah ada! Role tidak boleh sama!",
+					Status:  false,
+				})
+			}
 		}
 
 		_, errService := service.UpdateRole(editRole, id, userUUID)

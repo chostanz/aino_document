@@ -35,3 +35,9 @@ type Applications struct {
 	Deleted_by  sql.NullString `json:"deleted_by" db:"deleted_by"`
 	Deleted_at  sql.NullTime   `json:"deleted_at" db:"deleted_at"`
 }
+
+type ApplicationCodeTitle struct {
+	UUID  string `json:"application_uuid" db:"application_uuid"`
+	Code  string `json:"application_code" db:"application_code"`
+	Title string `json:"application_title" db:"application_title"`
+}

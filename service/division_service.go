@@ -3,6 +3,7 @@ package service
 import (
 	"aino_document/database"
 	"aino_document/models"
+	"database/sql"
 	"log"
 	"strconv"
 	"time"
@@ -79,6 +80,51 @@ func AddDivision(addDivision models.Division, userUUID string) error {
 		return err
 	}
 	return nil
+}
+
+func GetDivisionCodeAndTitle(uuid string) (models.DivisionCodeTitle, error) {
+	var division models.DivisionCodeTitle
+
+	err := db.Get(&division, "SELECT division_code, division_title FROM division_ms WHERE division_uuid = $1", uuid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Tidak ada baris yang sesuai
+			log.Println("No rows found for role_uuid:", uuid)
+			return models.DivisionCodeTitle{}, err
+		}
+
+		// Terjadi kesalahan lain
+		log.Println("Error getting role data by role_ms:", err)
+		return models.DivisionCodeTitle{}, err
+	}
+
+	return division, nil
+}
+
+func IsUniqueDivision(uuid, code, title string) (bool, error) {
+	var count int
+
+	var exsitingDivisionCode, exsitingDivisionTitle string
+	err := db.Get(&exsitingDivisionCode, "SELECT division_code FROM division_ms WHERE division_uuid = $1", uuid)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	err = db.Get(&exsitingDivisionTitle, "SELECT division_title FROM division_ms WHERE division_uuid = $1", uuid)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	if code == exsitingDivisionCode && title == exsitingDivisionTitle {
+		return true, nil
+	}
+
+	err = db.Get(&count, "SELECT COUNT(*) FROM division_ms WHERE (division_code = $1 OR division_title = $2) AND division_uuid != $3 AND deleted_at IS NULL", code, title, uuid)
+	if err != nil {
+		return false, err
+	}
+
+	return count == 0, nil
 }
 
 func UpdateDivision(updateDivision models.Division, id string, userUUID string) (models.Division, error) {

@@ -261,16 +261,48 @@ func UpdateDivision(c echo.Context) error {
 		})
 	}
 	if err == nil {
-		var existingDivisionID int
-		err := db.QueryRow("SELECT division_id FROM division_ms WHERE (division_title = $1 OR division_code = $2) AND deleted_at IS NULL", editDivision.Title, editDivision.Code).Scan(&existingDivisionID)
+		// var existingDivisionID int
+		// err := db.QueryRow("SELECT division_id FROM division_ms WHERE (division_title = $1 OR division_code = $2) AND deleted_at IS NULL", editDivision.Title, editDivision.Code).Scan(&existingDivisionID)
 
-		if err == nil {
-			return c.JSON(http.StatusBadRequest, &models.Response{
-				Code:    400,
-				Message: "Division sudah ada! Division tidak boleh sama!",
+		// if err == nil {
+		// 	return c.JSON(http.StatusBadRequest, &models.Response{
+		// 		Code:    400,
+		// 		Message: "Division sudah ada! Division tidak boleh sama!",
+		// 		Status:  false,
+		// 	})
+		// }
+
+		exsitingDivision, err := service.GetDivisionCodeAndTitle(id)
+		if err != nil {
+			log.Printf("Error getting existing user data: %v", err)
+			return c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Terjadi kesalahan internal pada server.",
 				Status:  false,
 			})
 		}
+
+		if editDivision.Code != exsitingDivision.Code || editDivision.Title != exsitingDivision.Title {
+			isUnique, err := service.IsUniqueDivision(id, editDivision.Code, editDivision.Title)
+			if err != nil {
+				log.Println("Error checking uniqueness:", err)
+				return c.JSON(http.StatusInternalServerError, &models.Response{
+					Code:    500,
+					Message: "Terjadi kesalahan internal pada server.",
+					Status:  false,
+				})
+			}
+
+			if !isUnique {
+				log.Println("Division sudah ada! Division tidak boleh sama!")
+				return c.JSON(http.StatusBadRequest, &models.Response{
+					Code:    400,
+					Message: "Division sudah ada! Division tidak boleh sama!",
+					Status:  false,
+				})
+			}
+		}
+
 		_, errService := service.UpdateDivision(editDivision, id, userUUID)
 		if errService != nil {
 			log.Println("Kesalahan selama pembaruan:", errService)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"aino_document/models"
+	"database/sql"
 	"errors"
 	"log"
 	"time"
@@ -88,6 +89,51 @@ func GetRoleById(id string) (models.Role, error) {
 	}
 	return roleId, nil
 
+}
+
+func GetRoleCodeAndTitle(uuid string) (models.RoleTitleCode, error) {
+	var role models.RoleTitleCode
+
+	err := db.Get(&role, "SELECT role_code, role_title FROM role_ms WHERE role_uuid = $1", uuid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Tidak ada baris yang sesuai
+			log.Println("No rows found for role_uuid:", uuid)
+			return models.RoleTitleCode{}, err
+		}
+
+		// Terjadi kesalahan lain
+		log.Println("Error getting role data by role_ms:", err)
+		return models.RoleTitleCode{}, err
+	}
+
+	return role, nil
+}
+
+func IsUniqueRole(uuid, code, title string) (bool, error) {
+	var count int
+
+	var exsitingRoleCode, exsitingRoleTitle string
+	err := db.Get(&exsitingRoleCode, "SELECT role_code FROM role_ms WHERE role_uuid = $1", uuid)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	err = db.Get(&exsitingRoleTitle, "SELECT role_title FROM role_ms WHERE role_uuid = $1", uuid)
+	if err != nil && err != sql.ErrNoRows {
+		return false, err
+	}
+
+	if code == exsitingRoleCode && title == exsitingRoleTitle {
+		return true, nil
+	}
+
+	err = db.Get(&count, "SELECT COUNT(*) FROM role_ms WHERE (role_code = $1 OR role_title = $2) AND role_uuid != $3 AND deleted_at IS NULL", code, title, uuid)
+	if err != nil {
+		return false, err
+	}
+
+	return count == 0, nil
 }
 
 func UpdateRole(updateRole models.Role, id string, userUUID string) (models.Role, error) {
