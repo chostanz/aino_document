@@ -13,6 +13,11 @@ type Users struct {
 	Role_title        string         `json:"role_title" db:"role_title"`
 	Application_title string         `json:"application_title" db:"application_title"`
 	Division_title    string         `json:"division_title" db:"division_title"`
+	PersonalName      string         `json:"personal_name" db:"personal_name" validate:"required"`
+	PersonalBirthday  string         `json:"personal_birthday" db:"personal_birthday" validate:"required"`
+	PersonalGender    string         `json:"personal_gender" db:"personal_gender" validate:"required"`
+	PersonalPhone     string         `json:"personal_phone" db:"personal_phone" validate:"min=0"`
+	PersonalAddress   string         `json:"personal_address" db:"personal_address" validate:"required"`
 	Created_by        sql.NullString `json:"created_by" db:"created_by"`
 	Created_at        time.Time      `json:"created_at" db:"created_at"`
 	Updated_by        sql.NullString `json:"updated_by" db:"updated_by"`

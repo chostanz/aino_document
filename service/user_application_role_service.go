@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/nyaruka/phonenumbers"
 )
 
 func GetUserApplicationRole() ([]models.Users, error) {
 	getUserAppRole := []models.Users{}
 
-	rows, err := db.Queryx("SELECT u.user_uuid, uar.user_application_role_uuid, u.user_name, u.user_email, r.role_title, a.application_title, d.division_title, uar.created_by, uar.created_at, uar.updated_by, uar.updated_at FROM user_ms u INNER JOIN user_application_role_ms uar ON u.user_id = uar.user_id INNER JOIN application_role_ms ar ON uar.application_role_id = ar.application_role_id INNER JOIN application_ms a ON ar.application_id = a.application_id INNER JOIN role_ms r ON ar.role_id = r.role_id INNER JOIN division_ms d ON uar.division_id = d.division_id WHERE uar.deleted_at IS NULL")
+	rows, err := db.Queryx("SELECT u.user_uuid, uar.user_application_role_uuid, u.user_name, u.user_email, r.role_title, a.application_title, d.division_title, pdm.personal_name, pdm.personal_address, pdm.personal_birthday, pdm.personal_gender, pdm.personal_phone, uar.created_by, uar.created_at, uar.updated_by, uar.updated_at FROM user_ms u INNER JOIN user_application_role_ms uar ON u.user_id = uar.user_id INNER JOIN application_role_ms ar ON uar.application_role_id = ar.application_role_id INNER JOIN application_ms a ON ar.application_id = a.application_id INNER JOIN role_ms r ON ar.role_id = r.role_id INNER JOIN division_ms d ON uar.division_id = d.division_id INNER JOIN personal_data_ms pdm ON u.user_id = pdm.user_id WHERE uar.deleted_at IS NULL")
 	if err != nil {
 		log.Println("Error querying database:", err)
 		return nil, err
@@ -32,7 +34,7 @@ func GetUserApplicationRole() ([]models.Users, error) {
 
 func GetSpecUseApplicationRole(id string) (models.Users, error) {
 	var users models.Users
-	err := db.Get(&users, "SELECT u.user_uuid, uar.user_application_role_uuid, u.user_name, u.user_email, r.role_title, a.application_title, d.division_title,  uar.created_by, uar.created_at, uar.updated_by, uar.updated_at FROM user_ms u INNER JOIN user_application_role_ms uar ON u.user_id = uar.user_id INNER JOIN application_role_ms ar ON uar.application_role_id = ar.application_role_id INNER JOIN application_ms a ON ar.application_id = a.application_id INNER JOIN role_ms r ON ar.role_id = r.role_id INNER JOIN division_ms d ON uar.division_id = d.division_id WHERE uar.user_application_role_uuid = $1 AND uar.deleted_at IS NULL", id)
+	err := db.Get(&users, "SELECT u.user_uuid, uar.user_application_role_uuid, u.user_name, u.user_email, r.role_title, a.application_title, d.division_title, pdm.personal_name, pdm.personal_address, pdm.personal_birthday, pdm.personal_gender, pdm.personal_phone, uar.created_by, uar.created_at, uar.updated_by, uar.updated_at FROM user_ms u INNER JOIN user_application_role_ms uar ON u.user_id = uar.user_id INNER JOIN application_role_ms ar ON uar.application_role_id = ar.application_role_id INNER JOIN application_ms a ON ar.application_id = a.application_id INNER JOIN role_ms r ON ar.role_id = r.role_id INNER JOIN division_ms d ON uar.division_id = d.division_id INNER JOIN personal_data_ms pdm ON u.user_id = pdm.user_id WHERE uar.user_application_role_uuid = $1 AND uar.deleted_at IS NULL", id)
 	if err != nil {
 		return models.Users{}, err
 	}
@@ -186,6 +188,47 @@ func UpdateUserAppRole(updateUserAppRole models.UpdateUser, userApplicationRoleU
 	if err != nil {
 		log.Println("Error fetching division_id:", err)
 		return models.UpdateUser{}, err
+	}
+
+	layout := "2006-01-02"
+	birthday := updateUserAppRole.PersonalBirthday
+	// Konversi input tanggal ke time.Time
+	parsedDate, err := time.Parse(layout, birthday)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return models.UpdateUser{}, err
+	}
+	fmt.Println(parsedDate)
+
+	if err != nil {
+		log.Fatal("Format tanggal tidak valid:", err)
+	}
+
+	phoneNumber := updateUserAppRole.PersonalPhone
+	// Parse nomor telepon
+	num, err := phonenumbers.Parse(phoneNumber, "ID")
+	if err != nil {
+		fmt.Println("Error parsing phone number:", err)
+		return models.UpdateUser{}, err
+	}
+
+	// Format nomor telepon dalam format nasional
+	formattedNum := phonenumbers.Format(num, phonenumbers.NATIONAL)
+
+	// Tampilkan hasil
+	fmt.Println("Nomor telepon yang diformat:", formattedNum)
+	_, errUpdate := db.NamedExec("UPDATE personal_data_ms SET personal_name = :personal_name, personal_birthday = :personal_birthday, personal_phone = :personal_phone, personal_gender = :personal_gender, personal_address = :personal_address WHERE user_id = (SELECT user_id FROM user_application_role_ms WHERE user_application_role_uuid = :user_application_role_uuid)", map[string]interface{}{
+		"personal_name":              updateUserAppRole.PersonalName,
+		"personal_birthday":          birthday,
+		"personal_phone":             formattedNum,
+		"personal_gender":            updateUserAppRole.PersonalGender,
+		"personal_address":           updateUserAppRole.PersonalAddress,
+		"user_application_role_uuid": userApplicationRoleUUID,
+	})
+
+	if errUpdate != nil {
+		log.Print(errUpdate)
+		return models.UpdateUser{}, errUpdate
 	}
 
 	var applicationRoleId string

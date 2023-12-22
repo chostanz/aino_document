@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/badoux/checkmail"
@@ -169,9 +170,43 @@ func UpdateUserAppRole(c echo.Context) error {
 				})
 			}
 		}
+		re := regexp.MustCompile(`^(?:(?:\(?(?:00|\+)([1-4]\d\d|[1-9]\d?)\)?)?[\-\.\ \\\/]?)?((?:\(?\d{1,}\)?[\-\.\ \\\/]?){0,})(?:[\-\.\ \\\/]?(?:#|ext\.?|extension|x)[\-\.\ \\\/]?(\d+))?$`)
+		if !re.MatchString(updateUserAppRole.PersonalPhone) {
+			log.Println("Nomor telepon tidak valid:", updateUserAppRole.PersonalPhone)
+			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+				Code:    422,
+				Message: "Nomor telepon tidak valid",
+				Status:  false,
+			})
+		}
 
+		if len(updateUserAppRole.PersonalPhone) < 12 || len(updateUserAppRole.PersonalPhone) > 15 {
+			log.Println("Nomor telepon tidak sesuai panjang:", updateUserAppRole.PersonalPhone)
+			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+				Code:    422,
+				Message: "Nomor telepon harus antara 12 dan 15 digit",
+				Status:  false,
+			})
+		}
+
+		if !IsValidGender(updateUserAppRole.PersonalGender) {
+			log.Println("Gender tidak valid:", updateUserAppRole.PersonalGender)
+			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+				Code:    422,
+				Message: "Gender tidak valid",
+				Status:  false,
+			})
+		}
 		_, addroleErr := service.UpdateUserAppRole(updateUserAppRole, userApplicationRoleUUID)
 		if addroleErr != nil {
+			if strings.Contains(addroleErr.Error(), "parsing time") {
+				log.Println("Format tanggal tidak valid:", addroleErr)
+				return c.JSON(http.StatusBadRequest, &models.Response{
+					Code:    400,
+					Message: "Format tanggal tidak valid",
+					Status:  false,
+				})
+			}
 			log.Printf("Error updating user application role: %v", addroleErr)
 			return c.JSON(http.StatusInternalServerError, &models.Response{
 				Code:    500,

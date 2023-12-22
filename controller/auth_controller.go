@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -36,6 +37,11 @@ type JwtCustomClaims struct {
 
 // Simpan token yang tidak valid dalam bentuk set
 var InvalidTokens = make(map[string]struct{})
+
+// IsValidGender memeriksa apakah nilai gender yang diberikan valid
+func IsValidGender(gender string) bool {
+	return gender == string("Laki-laki") || gender == string("Perempuan")
+}
 
 func RegisterUser(c echo.Context) error {
 	e := echo.New()
@@ -125,8 +131,44 @@ func RegisterUser(c echo.Context) error {
 			})
 		}
 
+		re := regexp.MustCompile(`^(?:(?:\(?(?:00|\+)([1-4]\d\d|[1-9]\d?)\)?)?[\-\.\ \\\/]?)?((?:\(?\d{1,}\)?[\-\.\ \\\/]?){0,})(?:[\-\.\ \\\/]?(?:#|ext\.?|extension|x)[\-\.\ \\\/]?(\d+))?$`)
+		if !re.MatchString(userRegister.PersonalPhone) {
+			log.Println("Nomor telepon tidak valid:", userRegister.PersonalPhone)
+			return c.JSON(http.StatusBadRequest, &models.Response{
+				Code:    400,
+				Message: "Nomor telepon tidak valid",
+				Status:  false,
+			})
+		}
+
+		if len(userRegister.PersonalPhone) <= 12 {
+			log.Println("Nomor telepon kurang:", userRegister.PersonalPhone)
+			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+				Code:    422,
+				Message: "Nomor telepon kurang dari 12 digit",
+				Status:  false,
+			})
+		}
+
+		if !IsValidGender(userRegister.PersonalGender) {
+			log.Println("Gender tidak valid:", userRegister.PersonalGender)
+			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+				Code:    422,
+				Message: "Gender tidak valid",
+				Status:  false,
+			})
+		}
+
 		addroleErr := service.RegisterUser(userRegister, userUUID)
 		if addroleErr != nil {
+			if strings.Contains(addroleErr.Error(), "parsing time") {
+				log.Println("Format tanggal tidak valid:", addroleErr)
+				return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+					Code:    422,
+					Message: "Format tanggal tidak valid",
+					Status:  false,
+				})
+			}
 			if validationErr, ok := addroleErr.(*service.ValidationError); ok {
 				if validationErr.Tag == "strong_password" {
 					return c.JSON(http.StatusUnprocessableEntity, &models.Response{

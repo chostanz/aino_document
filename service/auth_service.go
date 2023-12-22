@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nyaruka/phonenumbers"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -116,6 +117,49 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	}
 	log.Println("Application Role ID:", applicationRoleID)
 
+	layout := "2006-01-02"
+	birthday := userRegister.PersonalBirthday
+	// Konversi input tanggal ke time.Time
+	parsedDate, err := time.Parse(layout, birthday)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return err
+	}
+	fmt.Println(parsedDate)
+
+	if err != nil {
+		log.Fatal("Format tanggal tidak valid:", err)
+	}
+
+	phoneNumber := userRegister.PersonalPhone
+	// Parse nomor telepon
+	num, err := phonenumbers.Parse(phoneNumber, "ID")
+	if err != nil {
+		fmt.Println("Error parsing phone number:", err)
+		return err
+	}
+
+	// Format nomor telepon dalam format nasional
+	formattedNum := phonenumbers.Format(num, phonenumbers.NATIONAL)
+
+	// Tampilkan hasil
+	fmt.Println("Nomor telepon yang diformat:", formattedNum)
+	_, errInsert = db.NamedExec("INSERT INTO personal_data_ms (personal_id, personal_uuid, division_id, user_id, personal_name, personal_birthday, personal_gender, personal_phone, personal_address) VALUES (:personal_id, :personal_uuid, :division_id, :user_id, :personal_name, :personal_birthday, :personal_gender, :personal_phone, :personal_address)", map[string]interface{}{
+		"personal_id":       currentTimestamp + int64(uniqueID),
+		"personal_uuid":     uuidString,
+		"division_id":       divisionID,
+		"user_id":           user_id,
+		"personal_name":     userRegister.PersonalName,
+		"personal_birthday": userRegister.PersonalBirthday,
+		"personal_gender":   userRegister.PersonalGender,
+		"personal_phone":    formattedNum,
+		"personal_address":  userRegister.PersonalAddress,
+	})
+
+	if errInsert != nil {
+		log.Print(errInsert)
+		return err
+	}
 	// Insert user_application_role_ms data
 	_, err = db.Exec("INSERT INTO user_application_role_ms(user_application_role_uuid, user_id, application_role_id, division_id, created_by) VALUES ($1, $2, $3, $4, $5)", uuidString, user_id, applicationRoleID, divisionID, username)
 	if err != nil {
