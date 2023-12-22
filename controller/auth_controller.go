@@ -135,21 +135,20 @@ func RegisterUser(c echo.Context) error {
 		if !re.MatchString(userRegister.PersonalPhone) {
 			log.Println("Nomor telepon tidak valid:", userRegister.PersonalPhone)
 			return c.JSON(http.StatusBadRequest, &models.Response{
-				Code:    400,
+				Code:    422,
 				Message: "Nomor telepon tidak valid",
 				Status:  false,
 			})
 		}
 
-		if len(userRegister.PersonalPhone) <= 12 {
-			log.Println("Nomor telepon kurang:", userRegister.PersonalPhone)
+		if len(userRegister.PersonalPhone) < 12 || len(userRegister.PersonalPhone) > 15 {
+			log.Println("Nomor telepon tidak sesuai panjang:", userRegister.PersonalPhone)
 			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
 				Code:    422,
-				Message: "Nomor telepon kurang dari 12 digit",
+				Message: "Nomor telepon harus antara 12 dan 15 digit",
 				Status:  false,
 			})
 		}
-
 		if !IsValidGender(userRegister.PersonalGender) {
 			log.Println("Gender tidak valid:", userRegister.PersonalGender)
 			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
