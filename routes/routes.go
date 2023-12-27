@@ -66,6 +66,13 @@ func Route() *echo.Echo {
 	r.GET("/user/:id", controller.ShowAppRoleById)
 	superAdminGroup.GET("/user/all", controller.GetUserAppRole)
 	superAdminGroup.PUT("/user/delete/:id", controller.DeleteUserAppRole)
+
+	//document
+	superAdminGroup.POST("/document/add", controller.AddDocument)
+	r.GET("/document/all", controller.GetAllDoc)
+	r.GET("/document/:id", controller.ShowDocById)
+	superAdminGroup.PUT("/document/update/:id", controller.UpdateDocument)
+	superAdminGroup.PUT("/document/delete/:id", controller.DeleteDoc)
 	return r
 
 }
