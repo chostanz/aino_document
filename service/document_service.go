@@ -118,7 +118,7 @@ func UpdateDocument(updateDoc models.Document, id string, userUUID string) (mode
 
 	currentTime := time.Now()
 
-	_, err := db.NamedExec("UPDAT document_ms SET document_code = :document_code, document_name = :document_name, document_format_number = :document_format_number, updated_by = :updated_by, updated_at = :updated_at WHERE document_uuid = :id", map[string]interface{}{
+	_, err := db.NamedExec("UPDATE document_ms SET document_code = :document_code, document_name = :document_name, document_format_number = :document_format_number, updated_by = :updated_by, updated_at = :updated_at WHERE document_uuid = :id", map[string]interface{}{
 		"document_code":          updateDoc.Code,
 		"document_name":          updateDoc.Name,
 		"document_format_number": updateDoc.NumberFormat,
