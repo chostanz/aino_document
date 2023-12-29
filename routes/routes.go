@@ -66,7 +66,7 @@ func Route() *echo.Echo {
 	r.GET("/user/:id", controller.ShowAppRoleById)
 	superAdminGroup.GET("/user/all", controller.GetUserAppRole)
 	superAdminGroup.PUT("/user/delete/:id", controller.DeleteUserAppRole)
-	authGroup.GET("/user/bydivision/:code", controller.GetUserByDivision)
+	authGroup.GET("/user/bydivision/:title", controller.GetUserByDivision)
 
 	//document
 	superAdminGroup.POST("/document/add", controller.AddDocument)

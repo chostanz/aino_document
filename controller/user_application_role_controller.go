@@ -81,17 +81,17 @@ func GetUserByDivision(c echo.Context) error {
 
 	// c.Set("code", code)
 	// userAppRole, err := service.GetUserByDivision(code)
-	code := c.Get("division_code").(string)
+	title := c.Get("division_title").(string)
 	_, errK := service.GetUserInfoFromToken(tokenOnly)
 	if errK != nil {
 		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
 	}
 
 	// Simpan division code dalam variabel
-	divisionCode := code
+	divisionTitle := title
 
-	c.Set("code", divisionCode)
-	userAppRole, err := service.GetUserByDivision(divisionCode)
+	c.Set("title", divisionTitle)
+	userAppRole, err := service.GetUserByDivision(divisionTitle)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

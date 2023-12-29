@@ -17,7 +17,7 @@ type JwtCustomClaims struct {
 	// UserId   int    `json:"user_id"`
 	UserUUID           string `json:"user_uuid"`
 	AppRoleId          int    `json:"application_role_id"`
-	DivisionCode       string `json:"division_code"`
+	DivisionTitle      string `json:"division_title"`
 	RoleCode           string `json:"role_code"`
 	jwt.StandardClaims        // Embed the StandardClaims struct
 
@@ -102,7 +102,7 @@ func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		userUUID := claims.UserUUID // Mengakses UserID langsung
 		roleID := claims.AppRoleId
-		divisionCode := claims.DivisionCode
+		divisionTitle := claims.DivisionTitle
 		roleCode := claims.RoleCode
 		if roleCode != "" {
 			log.Print(roleCode)
@@ -110,11 +110,11 @@ func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		fmt.Println("User UUID:", userUUID)
 		fmt.Println("Role Code:", roleCode)
-		fmt.Println("Division Code:", divisionCode)
+		fmt.Println("Division title:", divisionTitle)
 
 		c.Set("user_uuid", userUUID)
 		c.Set("application_role_id", roleID)
-		c.Set("division_code", divisionCode)
+		c.Set("division_title", divisionTitle)
 		c.Set("role_code", roleCode)
 		if roleCode != "SA" {
 			return c.JSON(http.StatusForbidden, &models.Response{
@@ -185,7 +185,7 @@ func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		userUUID := claims.UserUUID // Mengakses UserID langsung
 		roleID := claims.AppRoleId
-		divisionCode := claims.DivisionCode
+		divisionTitle := claims.DivisionTitle
 		roleCode := claims.RoleCode
 		if roleCode != "" {
 			log.Print(roleCode)
@@ -196,7 +196,7 @@ func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		c.Set("user_uuid", userUUID)
 		c.Set("application_role_id", roleID)
-		c.Set("division_code", divisionCode)
+		c.Set("division_title", divisionTitle)
 		c.Set("role_code", roleCode)
 
 		// Token JWE valid, Anda dapat melanjutkan dengan pengolahan berikutnya
@@ -260,7 +260,7 @@ func AdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		userUUID := claims.UserUUID // Mengakses UserID langsung
 		roleID := claims.AppRoleId
-		divisionCode := claims.DivisionCode
+		divisionTitle := claims.DivisionTitle
 		roleCode := claims.RoleCode
 		if roleCode != "" {
 			log.Print(roleCode)
@@ -268,11 +268,11 @@ func AdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		fmt.Println("User UUID:", userUUID)
 		fmt.Println("Role Code:", roleCode)
-		fmt.Println("Division Code:", divisionCode)
+		fmt.Println("Division title:", divisionTitle)
 
 		c.Set("user_uuid", userUUID)
 		c.Set("application_role_id", roleID)
-		c.Set("division_code", divisionCode)
+		c.Set("division_title", divisionTitle)
 		c.Set("role_code", roleCode)
 		if roleCode != "A" {
 			return c.JSON(http.StatusForbidden, &models.Response{

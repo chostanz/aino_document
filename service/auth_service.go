@@ -176,7 +176,7 @@ func Login(userLogin models.Login) (string, string, string, int, bool, error) {
 	var user_uuid string
 	var role_code string
 	// var application_role_id int
-	var division_code string
+	var division_title string
 
 	rows, err := db.Query("SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END FROM user_ms WHERE user_email = $1 AND user_password = $2", userLogin.Email, userLogin.Password)
 	if err != nil {
@@ -216,18 +216,18 @@ func Login(userLogin models.Login) (string, string, string, int, bool, error) {
 
 	if isAuthentication {
 		// Query untuk mendapatkan division_code
-		rows, err := db.Query("SELECT d.division_code FROM division_ms d JOIN user_application_role_ms uar ON d.division_id = uar.division_id JOIN user_ms u ON uar.user_id = u.user_id WHERE u.user_uuid = $1", user_uuid)
+		rows, err := db.Query("SELECT d.division_title FROM division_ms d JOIN user_application_role_ms uar ON d.division_id = uar.division_id JOIN user_ms u ON uar.user_id = u.user_id WHERE u.user_uuid = $1", user_uuid)
 		if err != nil {
-			fmt.Println("Error querying division code:", err)
+			fmt.Println("Error querying division title:", err)
 			return "", "", "", 0, false, err
 		}
 		defer rows.Close()
 
 		// Periksa hasil query division_code
 		if rows.Next() {
-			err = rows.Scan(&division_code)
+			err = rows.Scan(&division_title)
 			if err != nil {
-				fmt.Println("Error scanning division_code row:", err)
+				fmt.Println("Error scanning division_ctitle row:", err)
 				return "", "", "", 0, false, err
 			}
 		}
@@ -256,7 +256,7 @@ func Login(userLogin models.Login) (string, string, string, int, bool, error) {
 		// 		return 0, false, 0, 0, err
 		// 	}
 		// }
-		return user_uuid, role_code, division_code, user_id, isAuthentication, nil
+		return user_uuid, role_code, division_title, user_id, isAuthentication, nil
 	}
 	return "", "", "", 0, false, nil // Jika tidak ada authentikasi yang berhasil
 
