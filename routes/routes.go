@@ -53,6 +53,7 @@ func Route() *echo.Echo {
 	r.GET("/division/:id", controller.ShowDivisionById)
 	r.GET("/get/division/:id", controller.GetDivisionById)
 	r.GET("/role/:id", controller.ShowRoleById)
+	r.GET("/list/role/:id", controller.ListAppRoleById)
 	r.GET("/get/role/:id", controller.GetRoleById)
 
 	//app role opsional

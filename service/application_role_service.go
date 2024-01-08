@@ -2,6 +2,7 @@ package service
 
 import (
 	"aino_document/models"
+	"database/sql"
 	"log"
 	"time"
 
@@ -74,6 +75,41 @@ func GetAppRole(id string) (models.ApplicationRole, error) {
 		return models.ApplicationRole{}, err
 	}
 	return appRoleId, nil
+
+}
+
+func ListAppRoleById(id string) ([]models.ListAllAppRole, error) {
+	//appRoleId := []models.ListAllAppRole{}
+
+	rows, err := db.Queryx("SELECT r.role_uuid, r.role_title FROM application_role_ms ar JOIN application_ms a ON ar.application_id = a.application_id JOIN role_ms r ON ar.role_id = r.role_id WHERE a.application_uuid = $1 AND ar.deleted_at IS NULL", id)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]struct{})
+	uniqueRoles := make([]models.ListAllAppRole, 0)
+
+	for rows.Next() {
+		var role models.ListAllAppRole
+		if err := rows.StructScan(&role); err != nil {
+			return nil, err
+		}
+
+		if _, ok := seen[role.Role_UUID]; !ok {
+			seen[role.Role_UUID] = struct{}{}
+			uniqueRoles = append(uniqueRoles, role)
+		}
+	}
+
+	// Check if no rows were returned
+	if len(uniqueRoles) == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return uniqueRoles, nil
 
 }
 

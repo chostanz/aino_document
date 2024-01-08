@@ -141,6 +141,34 @@ func GetAppRole(c echo.Context) error {
 	return c.JSON(http.StatusOK, getApp)
 }
 
+func ListAppRoleById(c echo.Context) error {
+	var id = c.Param("id")
+	var getApp []models.ListAllAppRole
+
+	getApp, err := service.ListAppRoleById(id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Print(err)
+			response := models.Response{
+				Code:    404,
+				Message: "Application Role tidak ditemukan!",
+				Status:  false,
+			}
+
+			return c.JSON(http.StatusNotFound, response)
+		} else {
+			log.Println(err)
+			return c.JSON(http.StatusInternalServerError, &models.Response{
+				Code:    500,
+				Message: "Terjadi kesalahan internal pada server. Mohon coba beberapa saat lagi!",
+				Status:  false,
+			})
+		}
+	}
+
+	return c.JSON(http.StatusOK, getApp)
+}
+
 func UpdateAppRole(c echo.Context) error {
 	tokenString := c.Request().Header.Get("Authorization")
 	secretKey := "secretJwToken" // Ganti dengan kunci yang benar

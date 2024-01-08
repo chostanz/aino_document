@@ -43,3 +43,8 @@ type AllAppRole struct {
 	Deleted_by        sql.NullString `json:"deleted_by" db:"deleted_by"`
 	Deleted_at        sql.NullTime   `json:"deleted_at" db:"deleted_at"`
 }
+
+type ListAllAppRole struct {
+	Role_UUID  string `json:"role_uuid" db:"role_uuid"`
+	Role_title string `json:"role_title" db:"role_title"`
+}
