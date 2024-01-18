@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -69,6 +70,32 @@ func AddDocument(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, &models.Response{
 			Code:    400,
 			Message: "Data tidak valid!",
+			Status:  false,
+		})
+	}
+
+	// Validasi spasi untuk Code, Name, dan NumberFormat
+	whitespace := regexp.MustCompile(`^\s`)
+	if whitespace.MatchString(addDocument.Code) {
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Code tidak boleh dimulai dengan spasi!",
+			Status:  false,
+		})
+	}
+
+	if whitespace.MatchString(addDocument.Name) {
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Name tidak boleh dimulai dengan spasi!",
+			Status:  false,
+		})
+	}
+
+	if whitespace.MatchString(addDocument.NumberFormat) {
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Format Nomor tidak boleh dimulai dengan spasi!",
 			Status:  false,
 		})
 	}
@@ -222,6 +249,31 @@ func UpdateDocument(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, &models.Response{
 			Code:    400,
 			Message: "Data invalid!",
+			Status:  false,
+		})
+	}
+
+	whitespace := regexp.MustCompile(`^\s`)
+	if whitespace.MatchString(editDoc.Code) {
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Code tidak boleh dimulai dengan spasi!",
+			Status:  false,
+		})
+	}
+
+	if whitespace.MatchString(editDoc.Name) {
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Name tidak boleh dimulai dengan spasi!",
+			Status:  false,
+		})
+	}
+
+	if whitespace.MatchString(editDoc.NumberFormat) {
+		return c.JSON(http.StatusUnprocessableEntity, &models.Response{
+			Code:    422,
+			Message: "Format Nomor tidak boleh dimulai dengan spasi!",
 			Status:  false,
 		})
 	}
