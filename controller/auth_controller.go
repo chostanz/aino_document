@@ -141,11 +141,11 @@ func RegisterUser(c echo.Context) error {
 			})
 		}
 
-		if len(userRegister.PersonalPhone) < 12 || len(userRegister.PersonalPhone) > 15 {
+		if len(userRegister.PersonalPhone) < 11 || len(userRegister.PersonalPhone) > 15 {
 			log.Println("Nomor telepon tidak sesuai panjang:", userRegister.PersonalPhone)
 			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
 				Code:    422,
-				Message: "Nomor telepon harus antara 12 dan 15 digit",
+				Message: "Nomor telepon harus antara 11 dan 15 digit",
 				Status:  false,
 			})
 		}
@@ -246,7 +246,7 @@ func Login(c echo.Context) error {
 		// AppRoleId:  application_role_id,
 		DivisionTitle: division_title,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour * 12).Unix(), // Tambahkan waktu kadaluwarsa (15 menit)
+			ExpiresAt: time.Now().Add(time.Hour).Unix(), // Token kadaluarsa dalam 1 jam
 		},
 	}
 

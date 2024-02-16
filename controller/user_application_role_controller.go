@@ -265,11 +265,11 @@ func UpdateUserAppRole(c echo.Context) error {
 			})
 		}
 
-		if len(updateUserAppRole.PersonalPhone) < 12 || len(updateUserAppRole.PersonalPhone) > 15 {
+		if len(updateUserAppRole.PersonalPhone) < 11 || len(updateUserAppRole.PersonalPhone) > 15 {
 			log.Println("Nomor telepon tidak sesuai panjang:", updateUserAppRole.PersonalPhone)
 			return c.JSON(http.StatusUnprocessableEntity, &models.Response{
 				Code:    422,
-				Message: "Nomor telepon harus antara 12 dan 15 digit",
+				Message: "Nomor telepon harus antara 11 dan 15 digit",
 				Status:  false,
 			})
 		}

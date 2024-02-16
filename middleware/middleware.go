@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"aino_document/database"
 	"aino_document/models"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,8 +12,11 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	jose "github.com/dvsekhvalnov/jose2go"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 )
+
+var db *sqlx.DB = database.Connection()
 
 type JwtCustomClaims struct {
 	// UserId   int    `json:"user_id"`
@@ -116,6 +121,7 @@ func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		c.Set("application_role_id", roleID)
 		c.Set("division_title", divisionTitle)
 		c.Set("role_code", roleCode)
+
 		if roleCode != "SA" {
 			return c.JSON(http.StatusForbidden, &models.Response{
 				Code:    403,
@@ -127,6 +133,91 @@ func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		// Token JWE valid, Anda dapat melanjutkan dengan pengolahan berikutnya
 		return next(c)
 	}
+}
+
+func CheckRolePermission(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		// Ambil informasi pengguna dari token
+		roleCode := c.Get("role_code").(string)
+
+		// Ambil izin dari database berdasarkan role_code
+		permissions, err := getRolePermissionsFromDB(roleCode)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal Server Error"})
+		}
+
+		// Set izin dalam konteks
+		c.Set("permissions", permissions)
+
+		menuID := c.Param("id")
+
+		// Panggil fungsi untuk mendapatkan required_permission dari DB
+		requiredPermission, err := getRequiredPermissionFromDB(menuID)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal Server Error"})
+		}
+
+		c.Set("required_permission", requiredPermission)
+
+		// Periksa izin
+		if !hasPermission(permissions, requiredPermission) {
+			return c.JSON(http.StatusForbidden, map[string]interface{}{
+				"error":               "Permission denied",
+				"required_permission": requiredPermission,
+				"user_permissions":    permissions,
+			})
+		}
+
+		return next(c)
+	}
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
+func hasPermission(userPermissions, requiredPermission string) bool {
+	userPermissionsSlice := strings.Split(userPermissions, ", ")
+	requiredPermissionSlice := strings.Split(requiredPermission, ", ")
+
+	for _, rp := range requiredPermissionSlice {
+		if !contains(userPermissionsSlice, rp) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func getRolePermissionsFromDB(roleCode string) (string, error) {
+	var permissionsStr string
+
+	err := db.Get(&permissionsStr, "SELECT permissions FROM role_ms WHERE role_code = $1", roleCode)
+	if err != nil {
+		log.Println("Error querying permissions from database:", err)
+		return "", err
+	}
+	return permissionsStr, nil
+}
+
+func getRequiredPermissionFromDB(menuID string) (string, error) {
+	var requiredPermission string
+	err := db.Get(&requiredPermission, "SELECT required_permission FROM menu_ms WHERE menu_uuid = $1", menuID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			// Tidak ada baris yang sesuai
+			log.Println("No rows found for menu_uuid:", menuID)
+			return "", nil
+		}
+		log.Println("Error querying required_permission:", err)
+		return "", err
+	}
+	return requiredPermission, nil
 }
 
 func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {

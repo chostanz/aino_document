@@ -60,6 +60,7 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	})
 
 	if errInsert != nil {
+		log.Print(errInsert)
 		return errInsert
 	}
 
@@ -85,6 +86,10 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	var applicationID int64
 	err = db.Get(&applicationID, "SELECT application_id FROM application_ms WHERE application_uuid = $1 AND deleted_at IS NULL", userRegister.ApplicationRole.Application_UUID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Application not found for application_uuid: %s", userRegister.ApplicationRole.Application_UUID)
+			return err
+		}
 		log.Println("Error getting application_id:", err)
 		return err
 	}
@@ -93,6 +98,10 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	var divisionID int64
 	err = db.Get(&divisionID, "SELECT division_id FROM division_ms WHERE division_uuid = $1 AND deleted_at IS NULL", userRegister.ApplicationRole.Division_UUID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Division not found for division_uuid: %s", userRegister.ApplicationRole.Division_UUID)
+			return err
+		}
 		log.Println("Error fetching division_id:", err)
 		return err
 	}
@@ -112,6 +121,10 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	err = db.Get(&applicationRoleID, "SELECT application_role_id FROM application_role_ms WHERE application_id = $1 AND role_id = $2",
 		applicationID, roleID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Application Role not found for application_uuid: %s", userRegister.ApplicationRole.Application_UUID)
+			return err
+		}
 		log.Println("Error getting application_role_id:", err)
 		return err
 	}

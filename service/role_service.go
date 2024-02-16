@@ -33,6 +33,11 @@ func AddRole(addRole models.Role, userUUID string) error {
 
 	uuid := uuid.New()
 	uuidString := uuid.String()
+	// permissionString := addRole.Permission
+	// if !strings.Contains(permissionString, ",") {
+	// 	// Menambahkan koma jika belum ada
+	// 	permissionString = strings.Replace(permissionString, " ", ", ", -1)
+	// }
 
 	_, err = db.NamedExec("INSERT INTO role_ms(role_id, role_uuid, role_code, role_title, created_by)VALUES(:role_id, :role_uuid, :role_code, :role_title, :created_by)", map[string]interface{}{
 		"role_id":    roleid,

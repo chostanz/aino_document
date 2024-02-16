@@ -19,6 +19,7 @@ func Route() *echo.Echo {
 
 	superAdminGroup := r.Group("/superadmin")
 	superAdminGroup.Use(middleware.SuperAdminMiddleware)
+	// superAdminGroup.Use(middleware.CheckRolePermission)
 	superAdminGroup.GET("/user/application/role", controller.GetUserAppRole)
 	superAdminGroup.POST("/application/add", controller.AddApplication)
 	superAdminGroup.POST("/application/role/add", controller.AddAppRole)
@@ -75,6 +76,16 @@ func Route() *echo.Echo {
 	r.GET("/document/:id", controller.ShowDocById)
 	superAdminGroup.PUT("/document/update/:id", controller.UpdateDocument)
 	superAdminGroup.PUT("/document/delete/:id", controller.DeleteDoc)
+
+	//menu
+
+	menuGroup := r.Group("/api")
+	menuGroup.Use(middleware.AuthMiddleware)
+	menuGroup.Use(middleware.CheckRolePermission)
+	superAdminGroup.GET("/menu", controller.GetAllMenu)
+	superAdminGroup.POST("/menu/add", controller.AddMenu)
+	menuGroup.GET("/menu/:id", controller.ShowMenuById)
+
 	return r
 
 }
