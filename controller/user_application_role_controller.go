@@ -87,7 +87,6 @@ func GetUserByDivision(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, "Invalid token atau token tidak ditemukan!")
 	}
 
-	// Simpan division code dalam variabel
 	divisionTitle := title
 
 	c.Set("title", divisionTitle)

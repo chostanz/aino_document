@@ -28,6 +28,7 @@ type TokenCheck struct {
 type JwtCustomClaims struct {
 	UserID   int    `json:"user_id"`
 	UserUUID string `json:"user_uuid"`
+	UserName string `json:"user_name"`
 	RoleCode string `json:"role_code"`
 	// AppRoleId          int `json:"application_role_id"`
 	DivisionTitle      string `json:"division_title"`
@@ -226,7 +227,7 @@ func Login(c echo.Context) error {
 		})
 	}
 
-	user_uuid, role_code, division_title, user_id, isAuthentication, _ := service.Login(loginbody) //bagian siniii dikasih role_id ama yg laen
+	user_uuid, role_code, division_title, username, user_id, isAuthentication, _ := service.Login(loginbody) //bagian siniii dikasih role_id ama yg laen
 
 	fmt.Println("isAuthentication:", isAuthentication)
 
@@ -242,6 +243,7 @@ func Login(c echo.Context) error {
 	claims := &JwtCustomClaims{
 		UserUUID: user_uuid,
 		UserID:   user_id,
+		UserName: username,
 		RoleCode: role_code,
 		// AppRoleId:  application_role_id,
 		DivisionTitle: division_title,
@@ -294,17 +296,17 @@ func Logout(c echo.Context) error {
 			Status:  false,
 		})
 	}
-	_, exists := InvalidTokens[tokenString]
-	if exists {
-		return c.JSON(http.StatusUnauthorized, &models.Response{
-			Code:    401,
-			Message: "Token tidak valid atau Anda telah logout",
-			Status:  false,
-		})
-	}
+	// _, exists := InvalidTokens[tokenString]
+	// if exists {
+	// 	return c.JSON(http.StatusUnauthorized, &models.Response{
+	// 		Code:    401,
+	// 		Message: "Token tidak valid atau Anda telah logout",
+	// 		Status:  false,s
+	// 	})
+	// }
 
-	InvalidTokens[tokenString] = struct{}{}
-
+	// Panggil fungsi untuk menandai token sebagai tidak valid
+	utils.InvalidateToken(tokenString)
 	return c.JSON(http.StatusOK, &models.Response{
 		Code:    200,
 		Message: "Berhasil Logout!",

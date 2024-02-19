@@ -3,6 +3,7 @@ package middleware
 import (
 	"aino_document/database"
 	"aino_document/models"
+	"aino_document/utils"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -51,11 +52,19 @@ func ExtractClaims(jwtToken string) (JwtCustomClaims, error) {
 
 	return *claims, nil
 }
+
 func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		tokenString := c.Request().Header.Get("Authorization")
 		secretKey := "secretJwToken" // Ganti dengan kunci yang benar
-
+		_, exists := utils.InvalidTokens[tokenString]
+		if exists {
+			return c.JSON(http.StatusUnauthorized, &models.Response{
+				Code:    401,
+				Message: "Token tidak valid atau Anda telah logout",
+				Status:  false,
+			})
+		}
 		// Periksa apakah tokenString tidak kosong
 		if tokenString == "" {
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
@@ -64,6 +73,14 @@ func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				"status":  false,
 			})
 		}
+		// _, exists := InvalidTokens[tokenString]
+		// if exists {
+		// 	return c.JSON(http.StatusUnauthorized, &models.Response{
+		// 		Code:    401,
+		// 		Message: "Token tidak valid atau Anda telah logout",
+		// 		Status:  false,
+		// 	})
+		// }
 
 		// Periksa apakah tokenString mengandung "Bearer "
 		if !strings.HasPrefix(tokenString, "Bearer ") {
@@ -224,7 +241,14 @@ func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		tokenString := c.Request().Header.Get("Authorization")
 		secretKey := "secretJwToken" // Ganti dengan kunci yang benar
-
+		_, exists := utils.InvalidTokens[tokenString]
+		if exists {
+			return c.JSON(http.StatusUnauthorized, &models.Response{
+				Code:    401,
+				Message: "Token tidak valid atau Anda telah logout",
+				Status:  false,
+			})
+		}
 		// Periksa apakah tokenString tidak kosong
 		if tokenString == "" {
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
@@ -299,7 +323,14 @@ func AdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		tokenString := c.Request().Header.Get("Authorization")
 		secretKey := "secretJwToken" // Ganti dengan kunci yang benar
-
+		_, exists := utils.InvalidTokens[tokenString]
+		if exists {
+			return c.JSON(http.StatusUnauthorized, &models.Response{
+				Code:    401,
+				Message: "Token tidak valid atau Anda telah logout",
+				Status:  false,
+			})
+		}
 		// Periksa apakah tokenString tidak kosong
 		if tokenString == "" {
 			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
