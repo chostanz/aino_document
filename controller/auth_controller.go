@@ -32,6 +32,7 @@ type JwtCustomClaims struct {
 	RoleCode string `json:"role_code"`
 	// AppRoleId          int `json:"application_role_id"`
 	DivisionTitle      string `json:"division_title"`
+	DivisionCode       string `json:"division_code"`
 	jwt.StandardClaims        // Embed the StandardClaims struct
 
 }
@@ -227,8 +228,10 @@ func Login(c echo.Context) error {
 		})
 	}
 
-	user_uuid, role_code, division_title, username, user_id, isAuthentication, _ := service.Login(loginbody) //bagian siniii dikasih role_id ama yg laen
-
+	user_uuid, role_code, division_title, division_code, username, user_id, isAuthentication, err := service.Login(loginbody) //bagian siniii dikasih role_id ama yg laen
+	if err != nil {
+		fmt.Println("Gagal login:", err)
+	}
 	fmt.Println("isAuthentication:", isAuthentication)
 
 	if !isAuthentication {
@@ -247,8 +250,9 @@ func Login(c echo.Context) error {
 		RoleCode: role_code,
 		// AppRoleId:  application_role_id,
 		DivisionTitle: division_title,
+		DivisionCode:  division_code,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Hour).Unix(), // Token kadaluarsa dalam 1 jam
+			ExpiresAt: time.Now().Add(15 * time.Minute).Unix(), // Token kadaluarsa dalam 1 jam
 		},
 	}
 

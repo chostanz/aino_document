@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	jose "github.com/dvsekhvalnov/jose2go"
@@ -24,6 +25,7 @@ type JwtCustomClaims struct {
 	UserUUID           string `json:"user_uuid"`
 	AppRoleId          int    `json:"application_role_id"`
 	DivisionTitle      string `json:"division_title"`
+	DivisionCode       string `json:"division_code"`
 	RoleCode           string `json:"role_code"`
 	jwt.StandardClaims        // Embed the StandardClaims struct
 
@@ -117,7 +119,14 @@ func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 				"status":  false,
 			})
 		}
-
+		if time.Now().Unix() > claims.StandardClaims.ExpiresAt {
+			// Token telah kedaluwarsa
+			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+				"code":    401,
+				"message": "Sesi Anda sudah habis! Silahkan login kembali.",
+				"status":  false,
+			})
+		}
 		// Sekarang Anda memiliki data dalam struct JwtCustomClaims
 		// Anda bisa mengakses UserId atau klaim lain sesuai kebutuhan
 		// fmt.Println("UserID:", claims.UserId)
@@ -126,6 +135,7 @@ func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		roleID := claims.AppRoleId
 		divisionTitle := claims.DivisionTitle
 		roleCode := claims.RoleCode
+		divisionCode := claims.DivisionCode
 		if roleCode != "" {
 			log.Print(roleCode)
 		}
@@ -133,7 +143,8 @@ func SuperAdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		fmt.Println("User UUID:", userUUID)
 		fmt.Println("Role Code:", roleCode)
 		fmt.Println("Division title:", divisionTitle)
-
+		fmt.Println("Division Code : ", divisionCode)
+		c.Set("division_code", divisionCode)
 		c.Set("user_uuid", userUUID)
 		c.Set("application_role_id", roleID)
 		c.Set("division_title", divisionTitle)
@@ -294,6 +305,15 @@ func AuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 
+		if time.Now().Unix() > claims.StandardClaims.ExpiresAt {
+			// Token telah kedaluwarsa
+			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+				"code":    401,
+				"message": "Sesi Anda sudah habis! Silahkan login kembali.",
+				"status":  false,
+			})
+		}
+
 		// Sekarang Anda memiliki data dalam struct JwtCustomClaims
 		// Anda bisa mengakses UserId atau klaim lain sesuai kebutuhan
 		// fmt.Println("UserID:", claims.UserId)
@@ -376,6 +396,14 @@ func AdminMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			})
 		}
 
+		if time.Now().Unix() > claims.StandardClaims.ExpiresAt {
+			// Token telah kedaluwarsa
+			return c.JSON(http.StatusUnauthorized, map[string]interface{}{
+				"code":    401,
+				"message": "Sesi Anda sudah habis! Silahkan login kembali.",
+				"status":  false,
+			})
+		}
 		// Sekarang Anda memiliki data dalam struct JwtCustomClaims
 		// Anda bisa mengakses UserId atau klaim lain sesuai kebutuhan
 		// fmt.Println("UserID:", claims.UserId)

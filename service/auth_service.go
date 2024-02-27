@@ -183,18 +183,19 @@ func RegisterUser(userRegister models.Register, userUUID string) error {
 	return nil
 }
 
-func Login(userLogin models.Login) (string, string, string, string, int, bool, error) {
+func Login(userLogin models.Login) (string, string, string, string, string, int, bool, error) {
 	var isAuthentication bool
 	var user_id int
 	var user_uuid string
 	var role_code string
 	// var application_role_id int
 	var division_title string
+	var division_code string
 	var username string
 
 	rows, err := db.Query("SELECT CASE WHEN COUNT(*) > 0 THEN 'true' ELSE 'false' END FROM user_ms WHERE user_email = $1 AND user_password = $2", userLogin.Email, userLogin.Password)
 	if err != nil {
-		return "", "", "", "", 0, false, err
+		return "", "", "", "", "", 0, false, err
 	}
 
 	defer rows.Close()
@@ -202,7 +203,7 @@ func Login(userLogin models.Login) (string, string, string, string, int, bool, e
 	rows, err = db.Query("SELECT user_uuid, user_password, user_id  from user_ms where user_email = $1", userLogin.Email)
 	if err != nil {
 		fmt.Println("Error querying users:", err)
-		return "", "", "", "", 0, false, err
+		return "", "", "", "", "", 0, false, err
 	}
 
 	defer rows.Close()
@@ -212,18 +213,18 @@ func Login(userLogin models.Login) (string, string, string, string, int, bool, e
 		err = rows.Scan(&user_uuid, &dbPasswordBase64, &user_id)
 		if err != nil {
 			fmt.Println("Error scanning row:", err)
-			return "", "", "", "", 0, false, err
+			return "", "", "", "", "", 0, false, err
 		}
 		dbPassword, errBycript := base64.StdEncoding.DecodeString(dbPasswordBase64)
 
 		if errBycript != nil {
 			fmt.Println("Password comparison failed:", errBycript)
-			return "", "", "", "", 0, false, errBycript
+			return "", "", "", "", "", 0, false, errBycript
 		}
 		errBycript = bcrypt.CompareHashAndPassword(dbPassword, []byte(userLogin.Password))
 		if errBycript != nil {
 			fmt.Println("Password comparison failed:", errBycript)
-			return "", "", "", "", 0, false, errBycript
+			return "", "", "", "", "", 0, false, errBycript
 		}
 		isAuthentication = true
 	}
@@ -231,7 +232,7 @@ func Login(userLogin models.Login) (string, string, string, string, int, bool, e
 	rows, err = db.Query("SELECT user_id FROM user_ms WHERE user_email = $1", userLogin.Email)
 	if err != nil {
 		fmt.Println("Error querying user:", err)
-		return "", "", "", "", 0, false, err
+		return "", "", "", "", "", 0, false, err
 	}
 	defer rows.Close()
 
@@ -239,33 +240,35 @@ func Login(userLogin models.Login) (string, string, string, string, int, bool, e
 		err = rows.Scan(&user_id)
 		if err != nil {
 			fmt.Println("Error scanning user row:", err)
-			return "", "", "", "", 0, false, err
+			return "", "", "", "", "", 0, false, err
 		}
 	}
 
 	if isAuthentication {
 		// Query untuk mendapatkan division_code
-		rows, err := db.Query("SELECT d.division_title FROM division_ms d JOIN user_application_role_ms uar ON d.division_id = uar.division_id JOIN user_ms u ON uar.user_id = u.user_id WHERE u.user_uuid = $1", user_uuid)
+		rows, err := db.Query("SELECT d.division_title, d.division_code FROM division_ms d JOIN user_application_role_ms uar ON d.division_id = uar.division_id JOIN user_ms u ON uar.user_id = u.user_id WHERE u.user_uuid = $1", user_uuid)
 		if err != nil {
 			fmt.Println("Error querying division title:", err)
-			return "", "", "", "", 0, false, err
+			return "", "", "", "", "", 0, false, err
 		}
 		defer rows.Close()
 
 		// Periksa hasil query division_code
 		if rows.Next() {
-			err = rows.Scan(&division_title)
+			err = rows.Scan(&division_title, &division_code)
 			if err != nil {
-				fmt.Println("Error scanning division_ctitle row:", err)
-				return "", "", "", "", 0, false, err
+				fmt.Println("Error scanning division_title and division_code rows:", err)
+				return "", "", "", "", "", 0, false, err
 			}
+		} else {
+			fmt.Println("No division title and division code found for user UUID:", user_uuid)
 		}
 
 		// Query untuk mendapatkan role_code
 		rows, err = db.Query("SELECT r.role_code FROM role_ms r JOIN application_role_ms ar ON r.role_id = ar.role_id JOIN user_application_role_ms uar ON ar.application_role_id = uar.application_role_id JOIN user_ms u ON u.user_id = uar.user_id WHERE u.user_uuid = $1", user_uuid)
 		if err != nil {
 			fmt.Println("Error querying role code:", err)
-			return "", "", "", "", 0, false, err
+			return "", "", "", "", "", 0, false, err
 		}
 		defer rows.Close()
 
@@ -274,14 +277,14 @@ func Login(userLogin models.Login) (string, string, string, string, int, bool, e
 			err = rows.Scan(&role_code)
 			if err != nil {
 				fmt.Println("Error scanning role_code row:", err)
-				return "", "", "", "", 0, false, err
+				return "", "", "", "", "", 0, false, err
 			}
 		}
 		// Query untuk mendapatkan username
 		rows, err = db.Query("SELECT user_name FROM user_ms WHERE user_uuid = $1", user_uuid)
 		if err != nil {
 			fmt.Println("Error querying username:", err)
-			return "", "", "", "", 0, false, err
+			return "", "", "", "", "", 0, false, err
 		}
 		defer rows.Close()
 
@@ -290,7 +293,7 @@ func Login(userLogin models.Login) (string, string, string, string, int, bool, e
 			err = rows.Scan(&username)
 			if err != nil {
 				fmt.Println("Error scanning username row:", err)
-				return "", "", "", "", 0, false, err
+				return "", "", "", "", "", 0, false, err
 			}
 		}
 
@@ -301,9 +304,9 @@ func Login(userLogin models.Login) (string, string, string, string, int, bool, e
 		// 		return 0, false, 0, 0, err
 		// 	}
 		// }
-		return user_uuid, role_code, division_title, username, user_id, isAuthentication, nil
+		return user_uuid, role_code, division_title, division_code, username, user_id, isAuthentication, nil
 	}
-	return "", "", "", "", 0, false, nil // Jika tidak ada authentikasi yang berhasil
+	return "", "", "", "", "", 0, false, nil // Jika tidak ada authentikasi yang berhasil
 
 }
 
