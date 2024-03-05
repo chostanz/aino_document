@@ -252,7 +252,7 @@ func Login(c echo.Context) error {
 		DivisionTitle: division_title,
 		DivisionCode:  division_code,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(15 * time.Minute).Unix(), // Token kadaluarsa dalam 1 jam
+			ExpiresAt: time.Now().Add(2 * time.Hour).Unix(), // Token kadaluarsa dalam 1 jam
 		},
 	}
 
