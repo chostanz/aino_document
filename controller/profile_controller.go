@@ -71,7 +71,7 @@ func MyProfile(c echo.Context) error {
 		if err == sql.ErrNoRows {
 			response := models.Response{
 				Code:    404,
-				Message: "Role tidak ditemukan!",
+				Message: "Profile tidak ditemukan!",
 				Status:  false,
 			}
 			return c.JSON(http.StatusNotFound, response)
