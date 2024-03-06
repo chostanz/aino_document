@@ -42,6 +42,7 @@ func Route() *echo.Echo {
 	authGroup := r.Group("/auth")
 	authGroup.Use(middleware.AuthMiddleware)
 	authGroup.PUT("/change/password", controller.ChangePassword)
+	authGroup.GET("/my/profile", controller.MyProfile)
 
 	//get all
 	r.GET("/division/all", controller.GetAllDivision)
