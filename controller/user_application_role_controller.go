@@ -393,3 +393,18 @@ func DeleteUserAppRole(c echo.Context) error {
 		})
 	}
 }
+
+func GetAllPersonal(c echo.Context) error {
+	documents, err := service.GetAllPersonalName()
+	if err != nil {
+		log.Print(err)
+		response := models.Response{
+			Code:    500,
+			Message: "Terjadi kesalahan internal server. Mohon coba beberapa saat lagi",
+			Status:  false,
+		}
+		return c.JSON(http.StatusInternalServerError, response)
+	}
+	return c.JSON(http.StatusOK, documents)
+
+}

@@ -26,6 +26,10 @@ type Users struct {
 	Deleted_at        sql.NullTime   `json:"deleted_at" db:"deleted_at"`
 }
 
+type Personal struct {
+	PersonalName string `json:"personal_name" db:"personal_name" validate:"required"`
+}
+
 type UsernameEmail struct {
 	UserAppRole string `json:"user_application_role_uuid" db:"user_application_role_uuid"`
 	UserName    string `json:"user_name" db:"user_name"`

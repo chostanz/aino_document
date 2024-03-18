@@ -64,6 +64,7 @@ func Route() *echo.Echo {
 	r.POST("/login", controller.Login)
 	r.POST("logout", controller.Logout)
 
+	r.GET("/personal/name/all", controller.GetAllPersonal)
 	//user
 	superAdminGroup.PUT("/user/update/:user_application_role_uuid", controller.UpdateUserAppRole)
 	r.GET("/user/:id", controller.ShowAppRoleById)
