@@ -48,7 +48,7 @@ func GetUserByDivision(title string) ([]models.Users, error) {
 func GetAllPersonalName() ([]models.Personal, error) {
 	getUserAppRole := []models.Personal{}
 
-	rows, err := db.Queryx("SELECT personal_name from personal_data_ms")
+	rows, err := db.Queryx("SELECT u.user_id, pd.personal_name FROM user_ms u JOIN personal_data_ms pd ON u.user_id = pd.user_id ")
 	if err != nil {
 		log.Println("Error querying database:", err)
 		return nil, err
