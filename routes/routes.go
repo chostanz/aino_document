@@ -62,7 +62,7 @@ func Route() *echo.Echo {
 	r.GET("/application/role/all", controller.GetAllAppRole)
 	r.GET("/application/role/:id", controller.GetAppRole)
 	r.POST("/login", controller.Login)
-	r.POST("logout", controller.Logout)
+	r.POST("/logout", controller.Logout)
 
 	r.GET("/personal/name/all", controller.GetAllPersonal)
 	//user
